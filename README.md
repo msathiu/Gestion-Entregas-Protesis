@@ -9,10 +9,6 @@
 
 Este sistema web permite administrar el registro, seguimiento y control de **entregas de prótesis a pacientes**, interactuando directamente con un motor de base de datos relacional **PostgreSQL 15**.
 
-El proyecto está diseñado bajo un enfoque académico estricto que prioriza la simplicidad, la integridad referencial y las buenas prácticas de normalización, cumpliendo con:
-- Un modelo de datos exacto de **3 tablas normalizadas**.
-- Un máximo de **10 archivos de implementación** en PHP.
-- Una arquitectura clara, sin frameworks ni sobrecargas empresariales, preparada para ampliaciones en entregas posteriores.
 
 ---
 
@@ -32,7 +28,6 @@ El proyecto está diseñado bajo un enfoque académico estricto que prioriza la 
 - **Docker Desktop** (en Windows/Mac) o **Docker Engine + Docker Compose** (en Linux).
 - Git (opcional, para clonar el repositorio).
 
-*No es necesario tener instalados localmente PHP, Apache ni PostgreSQL; todo se ejecuta dentro de los contenedores Docker.*
 
 ---
 
@@ -122,66 +117,7 @@ BaseDatos/
 
 ---
 
-## 7. Descripción de las 3 Tablas y sus Relaciones
-
-El modelo relacional está normalizado en Tercera Forma Normal (3FN) y consta de exactamente **3 tablas**:
-
-```text
-+---------------------+           +------------------------+
-|      paciente       | 1       N |    entrega_protesis    |
-+---------------------+-----------+------------------------+
-| PK id_paciente      |           | PK id_entrega          |
-| UQ numero_documento |           | UQ codigo_protesis     |
-|    nombres          |           | FK id_paciente         |
-|    apellidos        |           | FK id_tipo_protesis    |
-|    telefono         |           |    fecha_entrega       |
-|    correo           |           | CK estado              |
-+---------------------+           |    observaciones       |
-                                  +------------------------+
-+---------------------+                      | N
-|    tipo_protesis    | 1                    |
-+---------------------+----------------------+
-| PK id_tipo_protesis |
-| UQ nombre_tipo      |
-|    descripcion      |
-+---------------------+
-```
-
-### 1. `paciente` (Entidad Fuerte)
-- **`id_paciente` (SERIAL, PK):** Clave primaria autoincremental.
-- **`numero_documento` (VARCHAR(20), UNIQUE):** Cédula o pasaporte único del paciente.
-- **`nombres` y `apellidos` (VARCHAR(100), NOT NULL):** Datos de filiación.
-- **`telefono` y `correo` (VARCHAR):** Canales de contacto del paciente.
-
-### 2. `tipo_protesis` (Catálogo Normalizado)
-- **`id_tipo_protesis` (SERIAL, PK):** Clave primaria autoincremental.
-- **`nombre_tipo` (VARCHAR(100), UNIQUE):** Tipo de prótesis (Transtibial, Transfemoral, Mioeléctrica, etc.).
-- **`descripcion` (TEXT):** Especificación biomecánica o técnica del segmento.
-
-### 3. `entrega_protesis` (Tabla Central del CRUD)
-- **`id_entrega` (SERIAL, PK):** Identificador único del registro de entrega.
-- **`codigo_protesis` (VARCHAR(50), UNIQUE):** Código asignado a la pieza entregada (ej. `PRT-2026-0001`).
-- **`id_paciente` (INT, FK):** Referencia obligatoria a `paciente(id_paciente)` con regla `ON DELETE RESTRICT`. Bloquea la eliminación de un paciente si tiene entregas asociadas, preservando la integridad referencial (`SQLSTATE 23503`).
-- **`id_tipo_protesis` (INT, FK):** Referencia obligatoria a `tipo_protesis(id_tipo_protesis)` con regla `ON DELETE RESTRICT`.
-- **`fecha_entrega` (DATE, NOT NULL):** Fecha en la que el paciente recibe el dispositivo adaptado.
-- **`estado` (VARCHAR(30), CHECK):** Restricción que garantiza valores válidos: `'EN_FABRICACION'`, `'EN_PRUEBAS'`, `'ENTREGADO'`, `'DADO_DE_BAJA'`.
-- **`observaciones` (TEXT):** Notas clínicas y técnicas de la entrega.
-
----
-
-## 8. Funcionalidades CRUD Disponibles
-
-| Operación | Archivo | Descripción |
-| :--- | :--- | :--- |
-| **1. Consultar (Listado)** | [`index.php`](file:///index.php) | Muestra todas las entregas registradas mediante `INNER JOIN` entre las 3 tablas. Incluye buscador por código, cédula o nombre, filtro interactivo por estado y tarjetas de conteo métrico. |
-| **2. Consultar (Detalle)** | [`detalle.php`](file:///detalle.php) | Ficha detallada que cruza la información de la entrega, los datos de contacto del paciente receptor y la descripción técnica del tipo de prótesis. |
-| **3. Crear** | [`crear.php`](file:///crear.php) | Formulario con generación de código sugerido (`PRT-YYYY-XXXX`), selección de paciente, selección de tipo de prótesis, validación de código único y guardado en PostgreSQL. |
-| **4. Actualizar** | [`editar.php`](file:///editar.php) | Permite modificar cualquiera de los atributos de una entrega existente validando la unicidad del código modificado. |
-| **5. Eliminar** | [`eliminar.php`](file:///eliminar.php) | Pantalla de confirmación con doble modalidad: <br>a) **Baja Lógica:** Marca el estado como `DADO_DE_BAJA` preservando el historial. <br>b) **Eliminación Física:** Ejecuta `DELETE` permanente en la base de datos. |
-
----
-
-## 9. Preparación para el Futuro (Posibles Ampliaciones)
+## 7.  Preparación para el Futuro (Posibles Ampliaciones)
 
 La arquitectura modular y normalizada permite incorporar fácilmente nuevas funcionalidades en entregas posteriores sin tener que rediseñar el sistema actual:
 
