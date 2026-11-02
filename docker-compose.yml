@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: protesis_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-protesis_ortesis}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_secure_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    ports:
+      - "5433:5433"
+    networks:
+      - protesis_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-protesis_ortesis}"]
+      interval: 4s
+      timeout: 5s
+      retries: 15
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: protesis_app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-5433}
+      DB_NAME: ${DB_NAME:-protesis_ortesis}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres_secure_password}
+      APP_NAME: ${APP_NAME:-Sistema de Gestion de Protesis y Ortesis}
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - protesis_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  protesis_network:
+    driver: bridge
+
