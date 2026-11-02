@@ -1,17 +1,12 @@
--- ============================================================================
--- SISTEMA DE GESTIÓN DE ENTREGAS DE PRÓTESIS
--- Base de Datos PostgreSQL 15 - Primera Entrega Académica (3 Tablas Normalizadas)
--- ============================================================================
 
 -- Limpieza previa para reinicialización segura
 DROP TABLE IF EXISTS entrega_protesis CASCADE;
 DROP TABLE IF EXISTS tipo_protesis CASCADE;
 DROP TABLE IF EXISTS paciente CASCADE;
 
--- ----------------------------------------------------------------------------
--- TABLA 1: PACIENTE
+-- PACIENTE
 -- Almacena la información de los pacientes receptores de dispositivos protésicos.
--- ----------------------------------------------------------------------------
+
 CREATE TABLE paciente (
     id_paciente SERIAL PRIMARY KEY,
     numero_documento VARCHAR(20) NOT NULL UNIQUE,
@@ -22,21 +17,16 @@ CREATE TABLE paciente (
     fecha_registro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ----------------------------------------------------------------------------
--- TABLA 2: TIPO_PROTESIS
--- Catálogo de tipos de prótesis disponibles según segmento anatómico y tecnología.
--- ----------------------------------------------------------------------------
+--TIPO_PROTESIS
+
 CREATE TABLE tipo_protesis (
     id_tipo_protesis SERIAL PRIMARY KEY,
     nombre_tipo VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT
 );
 
--- ----------------------------------------------------------------------------
--- TABLA 3: ENTREGA_PROTESIS (TABLA CENTRAL DEL CRUD)
--- Registra cada entrega de prótesis realizada a un paciente, garantizando
--- la integridad referencial con las tablas paciente y tipo_protesis.
--- ----------------------------------------------------------------------------
+-- ENTREGA_PROTESIS (TABLA CENTRAL DEL CRUD)
+
 CREATE TABLE entrega_protesis (
     id_entrega SERIAL PRIMARY KEY,
     codigo_protesis VARCHAR(50) NOT NULL UNIQUE,
@@ -54,9 +44,8 @@ CREATE INDEX idx_entrega_paciente ON entrega_protesis(id_paciente);
 CREATE INDEX idx_entrega_estado ON entrega_protesis(estado);
 CREATE INDEX idx_entrega_fecha ON entrega_protesis(fecha_entrega);
 
--- ============================================================================
+
 -- DATOS INICIALES DE DEMOSTRACIÓN (SEMILLA ACADÉMICA)
--- ============================================================================
 
 -- Catálogo de tipos de prótesis
 INSERT INTO tipo_protesis (nombre_tipo, descripcion) VALUES
