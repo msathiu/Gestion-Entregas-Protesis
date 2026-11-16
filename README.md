@@ -1,127 +1,162 @@
-# Sistema de Gestión de Entregas de Prótesis
+# Sistema de Gestión de Adaptaciones y Mantenimiento de Prótesis y Órtesis
 
 > **Proyecto Académico – Asignatura: Bases de Datos**  
-> **Primera Entrega**: Implementación minimalista y funcional de un CRUD relacional para la gestión de entregas de prótesis con **PostgreSQL 15**, **PHP puro (PDO)**, **Bootstrap 5** y **Docker**.
+> **Carrera:** Ingeniería de Sistemas  
+> **Institución:** Universidad de Los Andes (ULA)  
+> **Fase 1:** Base Técnica, Arquitectura Backend, Conectividad PostgreSQL y Lógica CRUD (Sin interfaz gráfica)
 
 ---
 
 ## 1. Descripción del Proyecto
 
-Este sistema web permite administrar el registro, seguimiento y control de **entregas de prótesis a pacientes**, interactuando directamente con un motor de base de datos relacional **PostgreSQL 15**.
+Este proyecto académico implementa la arquitectura backend y la capa de acceso a datos para un **Sistema de Gestión de Adaptaciones y Mantenimiento de Prótesis y Órtesis**.
 
+El objetivo primordial es demostrar el dominio y aplicación práctica de los conceptos fundamentales de la asignatura **Bases de Datos**:
+- Modelado relacional normalizado.
+- Integridad referencial (claves primarias, foráneas y restricciones `CHECK` / `UNIQUE`).
+- Transacciones y operaciones CRUD (`INSERT`, `SELECT`, `UPDATE`, `DELETE`) usando consultas preparadas contra inyección SQL.
+- Consultas relacionales complejas mediante `INNER JOIN`, `LEFT JOIN`, `GROUP BY` y funciones de agregación.
+- Manejo de excepciones y traducción de códigos `SQLSTATE` de PostgreSQL.
+- Invocación de funciones almacenadas en PL/pgSQL y soporte para triggers de auditoría.
 
 ---
 
-## 2. Tecnologías Utilizadas
+## 2. Tecnologías Obligatorias
 
 - **Base de Datos:** PostgreSQL 15 (Alpine Linux).
-- **Lenguaje Backend:** PHP 8.2 (Puro, sin frameworks ni CMS).
-- **Conector a Base de Datos:** Extensión PDO (`pdo_pgsql`) con sentencias preparadas contra inyecciones SQL.
-- **Frontend:** HTML5, CSS3 y Bootstrap 5.3 (archivos locales, no requiere Internet).
-- **Contenedores:** Docker y Docker Compose.
+- **Lenguaje Backend:** PHP 8.2 puro (sin frameworks ni librerías externas).
+- **Capa de Abstracción:** PDO (`pdo_pgsql`) implementado bajo el patrón Singleton.
+- **Entorno de Despliegue:** Docker y Docker Compose.
 
 ---
 
-## 3. Requisitos de Instalación
+## 3. Estructura del Proyecto
 
-Únicamente se requiere tener instalado en el equipo anfitrión:
-- **Docker Desktop** (en Windows/Mac) o **Docker Engine + Docker Compose** (en Linux).
-- Git (opcional, para clonar el repositorio).
+El código está organizado de forma clara y modular, separando las responsabilidades de configuración, persistencia de datos (Modelos) y lógica de negocio/validación (Controladores):
 
-
----
-
-## 4. Pasos para Configurar y Ejecutar el Proyecto
-
-1. **Ubíquese en el directorio del proyecto:**
-   ```bash
-   cd /ruta/al/proyecto
-   ```
-
-2. **Verifique el archivo de variables de entorno `.env`:**
-   El proyecto incluye un archivo `.env` preconfigurado listo para usar:
-   ```env
-   DB_HOST=db
-   DB_PORT=5433
-   DB_NAME=protesis_ortesis
-   DB_USER=postgres
-   DB_PASSWORD=postgres_secure_password
-   APP_PORT=8080
-   ```
-
----
-
-## 5. Configuración y Ejecución mediante Docker
-
-### Iniciar el sistema:
-```bash
-docker compose up -d --build
-```
-PostgreSQL levantará automáticamente el esquema relacional (`database/schema.sql`) y sembrará los registros iniciales de prueba.
-
-### Acceder a la aplicación web:
-Abra cualquier navegador e ingrese a:
 ```text
-http://localhost:8080
+sistema_protesis_ortesis/
+│
+├── config/
+│   └── database.php                # Conexión Singleton PDO a PostgreSQL y utilidades de sesión
+│
+├── database/
+│   ├── 01_schema.sql               # DDL original: 29 tablas, restricciones, triggers y vistas
+│   └── 02_datos_prueba.sql         # Datos iniciales de demostración y pruebas
+│
+├── models/
+│   ├── Paciente.php                # Operaciones CRUD sobre la tabla 'paciente' y consultas relacionales
+│   ├── Evaluacion.php              # CRUD sobre 'evaluacion_biomecanica' y medidas anatómicas
+│   ├── Dispositivo.php             # CRUD sobre 'dispositivo_protesico' y componentes vinculados
+│   ├── Componente.php              # CRUD sobre 'componente' físico, compatibilidad e instalación
+│   ├── HistorialAjuste.php         # CRUD sobre 'historial_ajuste' y resumen por tipo
+│   └── Mantenimiento.php           # CRUD sobre 'mantenimiento_preventivo' y ejecución de PL/pgSQL
+│
+├── controllers/
+│   ├── PacienteController.php      # Validación de entradas y coordinación del modelo Paciente
+│   ├── EvaluacionController.php    # Validación y coordinación de evaluaciones biomecánicas
+│   ├── DispositivoController.php   # Validación y coordinación de dispositivos protésicos
+│   ├── ComponenteController.php    # Validación y gestión de componentes
+│   ├── HistorialAjusteController.php # Validación y gestión del historial de ajustes técnicos
+│   └── MantenimientoController.php # Validación, control de estados y llamadas a stored functions
+│
+├── includes/
+│   └── funciones.php               # Utilidades generales, validadores y traducción de SQLSTATE
+│
+├── tests/
+│   └── probar_conexion.php         # Banco automatizado de pruebas CRUD y validación de restricciones
+│
+├── Dockerfile                      # Imagen PHP 8.2 con Apache y extensión pdo_pgsql
+├── docker-compose.yml              # Orquestación de contenedores (app y db PostgreSQL)
+├── .env.example                    # Plantilla de variables de entorno
+├── index.php                       # Punto de entrada informativo del sistema y métricas
+└── README.md                       # Documentación técnica del proyecto
 ```
-La aplicación está lista para interactuar inmediatamente, sin requerir inicios de sesión complejos.
 
-### Detener los contenedores:
+---
+
+## 4. Base de Datos Relacional (PostgreSQL)
+
+El sistema utiliza el modelo relacional completo definido en `sistema_protesis_ortesis.sql` (29 tablas normalizadas):
+
+### Principales Entidades del Núcleo:
+1. **`paciente`**: Registro de pacientes con restricciones `UNIQUE` sobre cédula/documento y correo electrónico.
+2. **`paciente_condicion`**: Relaciona al paciente con su segmento corporal amputado y la causa de la condición.
+3. **`evaluacion_biomecanica`**: Evaluaciones clínicas (peso, altura, nivel de actividad K1–K4) y medidas anatómicas (`medida_anatomica`).
+4. **`dispositivo_protesico`**: Dispositivo entregado o en proceso, vinculado a la evaluación y tipo de prótesis/órtesis.
+5. **`modelo_componente` y `componente`**: Catálogo de piezas físicas por número de serie, fabricante y horas de desgaste.
+6. **`dispositivo_componente`**: Relación N:M que gestiona qué componentes están instalados en cada prótesis con histórico de retiros.
+7. **`historial_ajuste`**: Ajustes realizados en taller/consulta con detalle técnico y responsable.
+8. **`mantenimiento_preventivo`**: Mantenimientos periódicos programados y control de estados (PROGRAMADO, REALIZADO, VENCIDO).
+9. **`bitacora_auditoria`**: Auditoría automática de cambios mediante triggers PL/pgSQL.
+
+---
+
+## 5. Conceptos de Bases de Datos Demostrados
+
+| Concepto SQL | Implementación en el Proyecto |
+| :--- | :--- |
+| **SELECT con filtros y orden** | Métodos `listar()` en modelos con cláusulas `WHERE` y `ORDER BY`. |
+| **INSERT con RETURNING** | Métodos `crear()` que aprovechan `RETURNING id_*` de PostgreSQL para obtener la clave primaria generada. |
+| **UPDATE con WHERE** | Métodos `actualizar()` usando parámetros preparados para evitar inyección SQL. |
+| **DELETE y Claves Foráneas** | Método `destroy()` de `PacienteController` demostrando la captura del error `SQLSTATE 23503` al intentar eliminar registros con dependencias activas. |
+| **INNER JOIN múltiple** | Conexión de `evaluacion_biomecanica` $\leftrightarrow$ `paciente_condicion` $\leftrightarrow$ `paciente` $\leftrightarrow$ `segmento_corporal` $\leftrightarrow$ `nivel_actividad`. |
+| **LEFT JOIN y Agregación** | Métodos `resumenDispositivosPorPaciente()` y `resumenPorEstado()` usando `COUNT()` y `GROUP BY`. |
+| **Relación N:M** | Asociación de componentes a prótesis mediante la tabla intermedia `dispositivo_componente`. |
+| **Stored Functions (PL/pgSQL)** | Ejecución de `fn_marcar_mantenimientos_vencidos()` desde `Mantenimiento::marcarVencidos()`. |
+| **Triggers y Auditoría** | Inicialización de sesión `SET app.id_usuario_sistema` en `Database::getConnection()` para nutrir triggers de auditoría. |
+
+---
+
+## 6. Configuración y Ejecución con Docker
+
+### Requisitos Previos:
+- Docker Engine y Docker Compose instalados.
+
+### 1. Iniciar los contenedores:
+```bash
+docker compose up -d
+```
+
+### 2. Verificar el estado de los contenedores:
+```bash
+docker compose ps
+```
+Debe observar `protesis_app` (puerto 8080) y `protesis_db` (puerto 5433) en estado *Up / running*.
+
+### 3. Ejecutar el banco de pruebas automatizado:
+Para verificar la conexión con PostgreSQL, las 4 operaciones CRUD, el control de integridad referencial y las consultas JOIN:
+```bash
+docker exec -it protesis_app php tests/probar_conexion.php
+```
+
+### 4. Consultar el estado del sistema desde el navegador o curl:
+- **Resumen en texto plano:** `http://localhost:8080/`
+- **Resumen en formato JSON:** `http://localhost:8080/?format=json`
+- **Resultados de pruebas en navegador:** `http://localhost:8080/tests/probar_conexion.php`
+
+### 5. Detener el entorno:
 ```bash
 docker compose down
 ```
 
-### Reiniciar limpiando volúmenes (base de datos desde cero):
-```bash
-docker compose down -v && docker compose up -d
-```
-
-### Ejecutar las pruebas automatizadas del CRUD en consola:
-```bash
-docker exec protesis_app php /var/www/html/test.php
-```
-
 ---
 
-## 6. Estructura Simplificada de Archivos
+## 7. Pruebas Realizadas y Resultados
 
-El proyecto cumple estrictamente con el límite de **10 archivos de implementación**:
+El script `tests/probar_conexion.php` ejecuta de forma automatizada 6 pruebas técnicas:
 
-```text
-BaseDatos/
-├── .env                  # Variables de entorno para Docker
-├── Dockerfile            # Imagen PHP 8.2 con Apache y pdo_pgsql
-├── docker-compose.yml    # Orquestación de servicios (app + db)
-├── README.md             # Documentación técnica de instalación y uso
-├── sistema_protesis_ortesis.sql # Script SQL de respaldo del esquema
-│
-├── database/
-│   └── schema.sql        # DDL de PostgreSQL (3 tablas, claves e inserciones)
-│
-├── assets/               # Dependencias de interfaz locales (Bootstrap 5)
-│   ├── css/ (bootstrap.min.css, bootstrap-icons.min.css)
-│   └── js/  (bootstrap.bundle.min.js)
-│
-└── [ARCHIVOS DE IMPLEMENTACIÓN - EXACTAMENTE 10]
-    ├── 1. config.php     # Conexión Singleton PDO a PostgreSQL y utilidades (XSS, CSRF, flash)
-    ├── 2. header.php     # Layout: encabezado HTML5 y barra de navegación superior
-    ├── 3. footer.php     # Layout: pie de página y scripts JS
-    ├── 4. index.php      # [CRUD - Consultar] Listado de entregas, filtros y métricas
-    ├── 5. crear.php      # [CRUD - Crear] Formulario de registro de nueva entrega
-    ├── 6. detalle.php    # [CRUD - Consultar Detalle] Ficha técnica del paciente y prótesis
-    ├── 7. editar.php     # [CRUD - Actualizar] Modificación de datos de una entrega
-    ├── 8. eliminar.php   # [CRUD - Eliminar] Confirmación de baja lógica o eliminación física
-    ├── 9. pacientes.php  # [Catálogo de Soporte] Consulta y alta de pacientes
-    └── 10. test.php      # [Pruebas] Verificación automatizada en consola del CRUD y PostgreSQL
-```
+1. **Conexión a PostgreSQL:** Conexión exitosa a PostgreSQL 15 con PDO.
+2. **INSERT:** Registro de nuevo paciente obteniendo su ID primario mediante `RETURNING`.
+3. **SELECT:** Consulta de pacientes con ordenamiento alfabético y filtrado por estado activo.
+4. **UPDATE:** Modificación de datos de contacto y verificación de persistencia.
+5. **Integridad Referencial:** 
+   - Verificación de rechazo con código `SQLSTATE 23503` al intentar borrar un paciente con registros relacionados.
+   - Eliminación limpia del registro de prueba sin dependencias.
+6. **Consultas Relacionales (JOINs y Agrupaciones):**
+   - Demostración de `INNER JOIN` entre evaluaciones, pacientes y niveles de actividad.
+   - Demostración de relación N:M entre prótesis y piezas/componentes instalados.
+   - Demostración de `GROUP BY` con `COUNT()` para métricas de dispositivos por paciente y estados de mantenimiento.
+   - Ejecución de la función almacenada `fn_marcar_mantenimientos_vencidos()`.
 
----
-
-## 7.  Preparación para el Futuro (Posibles Ampliaciones)
-
-La arquitectura modular y normalizada permite incorporar fácilmente nuevas funcionalidades en entregas posteriores sin tener que rediseñar el sistema actual:
-
-1. **Evaluaciones Biomecánicas:** Incorporar una tabla `evaluacion_biomecanica` vinculada a `paciente` para registrar mediciones antropométricas previas a la fabricación.
-2. **Componentes y Montaje (N:M):** Añadir tablas `componente` y `entrega_componente` para registrar números de serie específicos de sockets, articulaciones y pies protésicos instalados.
-3. **Mantenimientos y Garantías:** Crear una tabla `mantenimiento_preventivo` ligada a `entrega_protesis` para registrar visitas periódicas de ajuste y lubricación.
-4. **Módulo de Usuarios y Roles:** Incorporar autenticación con roles (`TECNICO_ORTOPEDICO`, `EVALUADOR_CLINICO`, `ADMIN`) sin alterar las tablas de entregas existentes.
+**Tasa de éxito del banco de pruebas:** **100% (6/6 superadas).**
