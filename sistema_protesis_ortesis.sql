@@ -385,6 +385,54 @@ CREATE UNIQUE INDEX uq_dispositivo_componente_instalado
     ON dispositivo_componente (id_componente) WHERE fecha_retiro IS NULL;
 
 /* =====================================================================
+   MÓDULOS DE PRÓTESIS: REGISTRO Y ASIGNACIÓN (PIEZAS Y ENTREGAS)
+   ===================================================================== */
+
+CREATE TABLE IF NOT EXISTS tipo_pieza (
+    id_tipo_pieza           SERIAL PRIMARY KEY,
+    nombre_tipo             VARCHAR(100) NOT NULL UNIQUE,
+    descripcion             VARCHAR(250),
+    fecha_creacion          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion        INTEGER NOT NULL DEFAULT 1,
+    usuario_actualizacion   INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS pieza (
+    id_pieza            SERIAL PRIMARY KEY,
+    codigo_pieza        VARCHAR(50) NOT NULL UNIQUE,
+    nombre_pieza        VARCHAR(150) NOT NULL,
+    id_tipo_pieza       INTEGER NOT NULL REFERENCES tipo_pieza(id_tipo_pieza) ON DELETE RESTRICT,
+    id_fabricante       INTEGER NOT NULL REFERENCES fabricante(id_fabricante) ON DELETE RESTRICT,
+    numero_serie        VARCHAR(60) NOT NULL UNIQUE,
+    estado              VARCHAR(30) NOT NULL DEFAULT 'DISPONIBLE'
+                        CHECK (estado IN ('DISPONIBLE', 'ENTREGADA', 'EN_MANTENIMIENTO', 'DE_BAJA')),
+    costo               NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo >= 0),
+    descripcion         TEXT,
+    fecha_registro      DATE NOT NULL DEFAULT CURRENT_DATE,
+    fecha_creacion      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion    INTEGER NOT NULL DEFAULT 1,
+    usuario_actualizacion INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS entrega_pieza (
+    id_entrega          SERIAL PRIMARY KEY,
+    id_paciente         INTEGER NOT NULL REFERENCES paciente(id_paciente) ON DELETE RESTRICT,
+    id_pieza            INTEGER NOT NULL REFERENCES pieza(id_pieza) ON DELETE RESTRICT,
+    id_usuario_sistema  INTEGER NOT NULL REFERENCES usuario_sistema(id_usuario_sistema) ON DELETE RESTRICT,
+    fecha_entrega       DATE NOT NULL DEFAULT CURRENT_DATE,
+    estado_entrega      VARCHAR(30) NOT NULL DEFAULT 'ENTREGADO'
+                        CHECK (estado_entrega IN ('ENTREGADO', 'EN_PRUEBAS', 'DEVUELTO', 'DADO_DE_BAJA')),
+    observaciones       TEXT,
+    fecha_registro      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion    INTEGER NOT NULL DEFAULT 1,
+    usuario_actualizacion INTEGER NOT NULL DEFAULT 1
+);
+
+/* =====================================================================
    5. AJUSTES, MANTENIMIENTO, USO Y ALERTAS
    ===================================================================== */
 
@@ -962,6 +1010,43 @@ SELECT fn_marcar_mantenimientos_vencidos();
 -- genera ADVERTENCIA (>=80 %) el día 4 y CRITICA (>=100 %) el día 5
 INSERT INTO registro_uso (id_dispositivo_protesico, fecha_uso, horas_uso)
 SELECT 1, CURRENT_DATE - g, 20 FROM generate_series(5, 1, -1) AS g;
+
+-- Datos de prueba para Registro y Asignación de Piezas Protésicas
+INSERT INTO tipo_pieza (nombre_tipo, descripcion) VALUES
+    ('Prótesis Transtibial', 'Prótesis modular para amputación bajo rodilla'),
+    ('Prótesis Transfemoral', 'Prótesis con articulación sobre rodilla'),
+    ('Prótesis Transradial', 'Prótesis de miembro superior bajo codo'),
+    ('Pie Protésico Dinámico', 'Pie de fibra de carbono para almacenamiento y retorno de energía'),
+    ('Articulación de Rodilla', 'Rodilla policéntrica hidráulica con amortiguación'),
+    ('Socket Termoplástico', 'Encaje anatómico a medida para el muñón')
+ON CONFLICT (nombre_tipo) DO NOTHING;
+
+INSERT INTO pieza (codigo_pieza, nombre_pieza, id_tipo_pieza, id_fabricante, numero_serie, estado, costo, descripcion, fecha_registro)
+VALUES 
+    ('PZ-OTT-001', 'Pie Dinámico Taleo en Fibra de Carbono', 
+     (SELECT id_tipo_pieza FROM tipo_pieza WHERE nombre_tipo = 'Pie Protésico Dinámico' LIMIT 1),
+     (SELECT id_fabricante FROM fabricante WHERE nombre_fabricante = 'Ottobock' LIMIT 1),
+     'PIE-TAL-0001', 'ENTREGADA', 1250.00, 'Pie dinámico de alto impacto con retorno elástico', CURRENT_DATE - 15),
+    ('PZ-OSS-002', 'Rodilla Monocéntrica Hidráulica', 
+     (SELECT id_tipo_pieza FROM tipo_pieza WHERE nombre_tipo = 'Articulación de Rodilla' LIMIT 1),
+     (SELECT id_fabricante FROM fabricante WHERE nombre_fabricante = 'Össur' LIMIT 1),
+     'ROD-OSS-0002', 'DISPONIBLE', 3400.00, 'Articulación con control de fase de balanceo', CURRENT_DATE - 30),
+    ('PZ-BLA-003', 'Socket Transtibial Confort', 
+     (SELECT id_tipo_pieza FROM tipo_pieza WHERE nombre_tipo = 'Socket Termoplástico' LIMIT 1),
+     (SELECT id_fabricante FROM fabricante WHERE nombre_fabricante = 'Blatchford' LIMIT 1),
+     'SCK-BLA-0003', 'DISPONIBLE', 890.00, 'Encaje anatómico con sistema de suspensión', CURRENT_DATE - 10)
+ON CONFLICT (numero_serie) DO NOTHING;
+
+INSERT INTO entrega_pieza (id_paciente, id_pieza, id_usuario_sistema, fecha_entrega, estado_entrega, observaciones)
+VALUES (
+    (SELECT id_paciente FROM paciente ORDER BY id_paciente ASC LIMIT 1),
+    (SELECT id_pieza FROM pieza WHERE numero_serie = 'PIE-TAL-0001' LIMIT 1),
+    (SELECT id_usuario_sistema FROM usuario_sistema WHERE nombre_usuario = 'jperez' LIMIT 1),
+    CURRENT_DATE - 8,
+    'ENTREGADO',
+    'Asignación y entrega inicial verificada en taller ortopédico.'
+)
+ON CONFLICT DO NOTHING;
 
 /* ---- Verificación rápida ----
 SELECT * FROM vista_alertas_pendientes;

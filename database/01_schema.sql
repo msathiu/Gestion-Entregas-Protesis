@@ -385,6 +385,54 @@ CREATE UNIQUE INDEX uq_dispositivo_componente_instalado
     ON dispositivo_componente (id_componente) WHERE fecha_retiro IS NULL;
 
 /* =====================================================================
+   MÓDULOS DE PRÓTESIS: REGISTRO Y ASIGNACIÓN (PIEZAS Y ENTREGAS)
+   ===================================================================== */
+
+CREATE TABLE IF NOT EXISTS tipo_pieza (
+    id_tipo_pieza           SERIAL PRIMARY KEY,
+    nombre_tipo             VARCHAR(100) NOT NULL UNIQUE,
+    descripcion             VARCHAR(250),
+    fecha_creacion          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion        INTEGER NOT NULL DEFAULT 1,
+    usuario_actualizacion   INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS pieza (
+    id_pieza            SERIAL PRIMARY KEY,
+    codigo_pieza        VARCHAR(50) NOT NULL UNIQUE,
+    nombre_pieza        VARCHAR(150) NOT NULL,
+    id_tipo_pieza       INTEGER NOT NULL REFERENCES tipo_pieza(id_tipo_pieza) ON DELETE RESTRICT,
+    id_fabricante       INTEGER NOT NULL REFERENCES fabricante(id_fabricante) ON DELETE RESTRICT,
+    numero_serie        VARCHAR(60) NOT NULL UNIQUE,
+    estado              VARCHAR(30) NOT NULL DEFAULT 'DISPONIBLE'
+                        CHECK (estado IN ('DISPONIBLE', 'ENTREGADA', 'EN_MANTENIMIENTO', 'DE_BAJA')),
+    costo               NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo >= 0),
+    descripcion         TEXT,
+    fecha_registro      DATE NOT NULL DEFAULT CURRENT_DATE,
+    fecha_creacion      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion    INTEGER NOT NULL DEFAULT 1,
+    usuario_actualizacion INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS entrega_pieza (
+    id_entrega          SERIAL PRIMARY KEY,
+    id_paciente         INTEGER NOT NULL REFERENCES paciente(id_paciente) ON DELETE RESTRICT,
+    id_pieza            INTEGER NOT NULL REFERENCES pieza(id_pieza) ON DELETE RESTRICT,
+    id_usuario_sistema  INTEGER NOT NULL REFERENCES usuario_sistema(id_usuario_sistema) ON DELETE RESTRICT,
+    fecha_entrega       DATE NOT NULL DEFAULT CURRENT_DATE,
+    estado_entrega      VARCHAR(30) NOT NULL DEFAULT 'ENTREGADO'
+                        CHECK (estado_entrega IN ('ENTREGADO', 'EN_PRUEBAS', 'DEVUELTO', 'DADO_DE_BAJA')),
+    observaciones       TEXT,
+    fecha_registro      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario_creacion    INTEGER NOT NULL DEFAULT 1,
+    usuario_actualizacion INTEGER NOT NULL DEFAULT 1
+);
+
+/* =====================================================================
    5. AJUSTES, MANTENIMIENTO, USO Y ALERTAS
    ===================================================================== */
 
