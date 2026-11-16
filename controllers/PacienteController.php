@@ -2,10 +2,12 @@
 /**
  * Controlador: PacienteController
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
- * Responsabilidad: Coordinar validaciones y operaciones CRUD sobre pacientes
+ * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre pacientes
  */
 
 require_once __DIR__ . '/../models/Paciente.php';
+require_once __DIR__ . '/../auth/Auth.php';
+require_once __DIR__ . '/../auth/Permisos.php';
 require_once __DIR__ . '/../includes/funciones.php';
 
 class PacienteController {
@@ -19,6 +21,9 @@ class PacienteController {
      * Lista pacientes registrados
      */
     public function index(?bool $soloActivos = true): array {
+        $errorPermiso = Auth::validarPermiso('pacientes', 'listar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $pacientes = $this->modelo->listar($soloActivos);
             return [
@@ -39,6 +44,9 @@ class PacienteController {
      * Muestra la información de un paciente específico
      */
     public function show(int $id): array {
+        $errorPermiso = Auth::validarPermiso('pacientes', 'ver');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $paciente = $this->modelo->obtenerPorId($id);
             if (!$paciente) {
@@ -65,13 +73,16 @@ class PacienteController {
      * Valida y registra un nuevo paciente
      */
     public function store(array $datos): array {
+        $errorPermiso = Auth::validarPermiso('pacientes', 'crear');
+        if ($errorPermiso) return $errorPermiso;
+
         $requeridos = ['numero_documento', 'nombres', 'apellidos', 'fecha_nacimiento', 'sexo', 'correo'];
         $faltantes = validar_campos_requeridos($datos, $requeridos);
 
         if (!empty($faltantes)) {
             return [
-                'success' => false,
-                'mensaje' => 'Campos obligatorios incompletos.',
+                'success'   => false,
+                'mensaje'   => 'Campos obligatorios incompletos.',
                 'faltantes' => $faltantes
             ];
         }
@@ -97,6 +108,9 @@ class PacienteController {
      * Valida y actualiza los datos de un paciente
      */
     public function update(int $id, array $datos): array {
+        $errorPermiso = Auth::validarPermiso('pacientes', 'editar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -110,8 +124,8 @@ class PacienteController {
 
         if (!empty($faltantes)) {
             return [
-                'success' => false,
-                'mensaje' => 'Campos obligatorios incompletos para actualizar.',
+                'success'   => false,
+                'mensaje'   => 'Campos obligatorios incompletos para actualizar.',
                 'faltantes' => $faltantes
             ];
         }
@@ -136,6 +150,9 @@ class PacienteController {
      * Elimina un paciente verificando restricciones de integridad referencial
      */
     public function destroy(int $id): array {
+        $errorPermiso = Auth::validarPermiso('pacientes', 'eliminar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -164,6 +181,9 @@ class PacienteController {
      * Consulta las condiciones clínicas y amputaciones asociadas a un paciente
      */
     public function condiciones(int $idPaciente): array {
+        $errorPermiso = Auth::validarPermiso('pacientes', 'condiciones');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $condiciones = $this->modelo->obtenerCondiciones($idPaciente);
             return [
@@ -184,6 +204,9 @@ class PacienteController {
      * Consulta el reporte agregado de dispositivos por paciente
      */
     public function resumenDispositivos(): array {
+        $errorPermiso = Auth::validarPermiso('pacientes', 'listar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $resumen = $this->modelo->resumenDispositivosPorPaciente();
             return [

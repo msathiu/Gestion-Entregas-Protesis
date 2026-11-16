@@ -2,10 +2,12 @@
 /**
  * Controlador: HistorialAjusteController
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
- * Responsabilidad: Coordinar validaciones y operaciones CRUD sobre el historial de ajustes
+ * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre el historial de ajustes
  */
 
 require_once __DIR__ . '/../models/HistorialAjuste.php';
+require_once __DIR__ . '/../auth/Auth.php';
+require_once __DIR__ . '/../auth/Permisos.php';
 require_once __DIR__ . '/../includes/funciones.php';
 
 class HistorialAjusteController {
@@ -19,6 +21,9 @@ class HistorialAjusteController {
      * Lista ajustes técnicos realizados
      */
     public function index(?int $idDispositivo = null): array {
+        $errorPermiso = Auth::validarPermiso('ajustes', 'listar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $ajustes = $this->modelo->listar($idDispositivo);
             return [
@@ -39,6 +44,9 @@ class HistorialAjusteController {
      * Muestra el detalle de un ajuste por ID
      */
     public function show(int $id): array {
+        $errorPermiso = Auth::validarPermiso('ajustes', 'ver');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $ajuste = $this->modelo->obtenerPorId($id);
             if (!$ajuste) {
@@ -65,6 +73,9 @@ class HistorialAjusteController {
      * Valida y registra un nuevo ajuste técnico
      */
     public function store(array $datos): array {
+        $errorPermiso = Auth::validarPermiso('ajustes', 'crear');
+        if ($errorPermiso) return $errorPermiso;
+
         $requeridos = ['id_dispositivo_protesico', 'id_tipo_ajuste', 'id_usuario_sistema_tecnico', 'descripcion_ajuste'];
         $faltantes = validar_campos_requeridos($datos, $requeridos);
 
@@ -97,6 +108,9 @@ class HistorialAjusteController {
      * Valida y actualiza los datos de un ajuste
      */
     public function update(int $id, array $datos): array {
+        $errorPermiso = Auth::validarPermiso('ajustes', 'editar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -136,6 +150,9 @@ class HistorialAjusteController {
      * Elimina un ajuste técnico
      */
     public function destroy(int $id): array {
+        $errorPermiso = Auth::validarPermiso('ajustes', 'eliminar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -164,6 +181,9 @@ class HistorialAjusteController {
      * Resumen de ajustes agrupados por tipo
      */
     public function resumenPorTipo(): array {
+        $errorPermiso = Auth::validarPermiso('ajustes', 'resumen');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $resumen = $this->modelo->resumenPorTipo();
             return [

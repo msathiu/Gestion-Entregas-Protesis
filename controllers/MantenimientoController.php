@@ -2,10 +2,12 @@
 /**
  * Controlador: MantenimientoController
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
- * Responsabilidad: Coordinar validaciones y operaciones CRUD sobre mantenimiento preventivo
+ * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre mantenimiento preventivo
  */
 
 require_once __DIR__ . '/../models/Mantenimiento.php';
+require_once __DIR__ . '/../auth/Auth.php';
+require_once __DIR__ . '/../auth/Permisos.php';
 require_once __DIR__ . '/../includes/funciones.php';
 
 class MantenimientoController {
@@ -19,6 +21,9 @@ class MantenimientoController {
      * Lista mantenimientos preventivos
      */
     public function index(?int $idEstado = null): array {
+        $errorPermiso = Auth::validarPermiso('mantenimientos', 'listar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $mantenimientos = $this->modelo->listar($idEstado);
             return [
@@ -39,6 +44,9 @@ class MantenimientoController {
      * Muestra el detalle de un mantenimiento por ID
      */
     public function show(int $id): array {
+        $errorPermiso = Auth::validarPermiso('mantenimientos', 'ver');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $mantenimiento = $this->modelo->obtenerPorId($id);
             if (!$mantenimiento) {
@@ -65,6 +73,9 @@ class MantenimientoController {
      * Valida y programa un nuevo mantenimiento
      */
     public function store(array $datos): array {
+        $errorPermiso = Auth::validarPermiso('mantenimientos', 'crear');
+        if ($errorPermiso) return $errorPermiso;
+
         $requeridos = ['id_dispositivo_protesico', 'id_tipo_mantenimiento', 'id_estado_mantenimiento', 'fecha_programada'];
         $faltantes = validar_campos_requeridos($datos, $requeridos);
 
@@ -97,6 +108,9 @@ class MantenimientoController {
      * Valida y actualiza un mantenimiento
      */
     public function update(int $id, array $datos): array {
+        $errorPermiso = Auth::validarPermiso('mantenimientos', 'editar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -136,6 +150,9 @@ class MantenimientoController {
      * Elimina un mantenimiento preventivo
      */
     public function destroy(int $id): array {
+        $errorPermiso = Auth::validarPermiso('mantenimientos', 'eliminar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -164,6 +181,9 @@ class MantenimientoController {
      * Ejecuta el procedimiento almacenado para marcar mantenimientos atrasados/vencidos
      */
     public function marcarVencidos(): array {
+        $errorPermiso = Auth::validarPermiso('mantenimientos', 'marcar_vencidos');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $afectados = $this->modelo->marcarVencidos();
             return [
@@ -184,6 +204,9 @@ class MantenimientoController {
      * Resumen de mantenimientos clasificados por estado
      */
     public function resumenPorEstado(): array {
+        $errorPermiso = Auth::validarPermiso('mantenimientos', 'resumen');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $resumen = $this->modelo->resumenPorEstado();
             return [

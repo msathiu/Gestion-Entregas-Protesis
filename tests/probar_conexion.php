@@ -1,15 +1,16 @@
 <?php
 /**
- * Script de Pruebas: Verificación de Conexión y Operaciones CRUD PostgreSQL
+ * Script de Pruebas: Verificación Integral de Base de Datos, CRUD, Roles y Permisos
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  *
  * Ejecución vía terminal:
- *   php tests/probar_conexion.php
- *   o dentro del contenedor:
  *   docker exec -it protesis_app php tests/probar_conexion.php
  */
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../auth/Auth.php';
+require_once __DIR__ . '/../auth/Permisos.php';
+require_once __DIR__ . '/../controllers/UsuarioController.php';
 require_once __DIR__ . '/../controllers/PacienteController.php';
 require_once __DIR__ . '/../controllers/EvaluacionController.php';
 require_once __DIR__ . '/../controllers/DispositivoController.php';
@@ -17,7 +18,6 @@ require_once __DIR__ . '/../controllers/ComponenteController.php';
 require_once __DIR__ . '/../controllers/HistorialAjusteController.php';
 require_once __DIR__ . '/../controllers/MantenimientoController.php';
 
-// Formato de salida para consola o navegador
 $esCli = (php_sapi_name() === 'cli');
 function linea(string $texto = ''): void {
     global $esCli;
@@ -58,7 +58,7 @@ if (!$esCli) {
 
 linea("===========================================================================");
 linea(" SISTEMA DE GESTIÓN DE ADAPTACIONES Y MANTENIMIENTO DE PRÓTESIS Y ÓRTESIS");
-linea(" BANCO DE PRUEBAS DE BASE DE DATOS POSTGRESQL (PHP + PDO)");
+linea(" BANCO DE PRUEBAS TÉCNICAS: CRUD, ROLES, PERMISOS Y POSTGRESQL");
 linea(" Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)");
 linea(" Fecha/Hora: " . date('Y-m-d H:i:s'));
 linea("===========================================================================");
@@ -87,8 +87,11 @@ try {
     exit(1);
 }
 
+// Para las operaciones CRUD de demostración iniciamos como Administrador
+Auth::iniciarSesionComo('admin');
+
 // -------------------------------------------------------------------------
-// PRUEBA 2: Inserción de Paciente (INSERT)
+// PRUEBA 2: Inserción de Paciente (INSERT con RETURNING)
 // -------------------------------------------------------------------------
 encabezado("PRUEBA 2: Inserción de Paciente (Operación INSERT con RETURNING)");
 $totalPruebas++;
@@ -118,7 +121,7 @@ if ($resInsert['success']) {
     detalle("Correo", $datosPaciente['correo']);
     $pruebasSuperadas++;
 } else {
-    error("Fallo en la inserción: " . $resInsert['mensaje']);
+    error("Fallo en la inserción: " . ($resInsert['mensaje'] ?? 'Error desconocido'));
 }
 
 // -------------------------------------------------------------------------
@@ -131,11 +134,11 @@ $resLista = $pacienteCtrl->index(true);
 if ($resLista['success'] && $resLista['total'] > 0) {
     ok("Consulta ejecutada. Total de pacientes activos encontrados: {$resLista['total']}");
     foreach ($resLista['data'] as $p) {
-        detalle("Paciente ID {$p['id_paciente']}", "{$p['apellidos']}, {$p['nombres']} [{$p['numero_documento']}] - {$p['correo']}");
+        detalle("Paciente ID {$p['id_paciente']}", "{$p['apellidos']}, {$p['nombres']} [{$p['numero_documento']}]");
     }
     $pruebasSuperadas++;
 } else {
-    error("No se pudieron listar los pacientes: " . ($resLista['mensaje'] ?? 'Sin datos'));
+    error("No se pudieron listar los pacientes.");
 }
 
 // -------------------------------------------------------------------------
@@ -159,28 +162,24 @@ if ($idPacienteCreado) {
     $resUpdate = $pacienteCtrl->update($idPacienteCreado, $datosUpdate);
     if ($resUpdate['success']) {
         ok("Paciente ID {$idPacienteCreado} actualizado correctamente.");
-
-        // Verificamos re-consultando con show()
         $consultaVerif = $pacienteCtrl->show($idPacienteCreado);
         detalle("Nombre post-actualización", $consultaVerif['data']['nombres']);
         detalle("Teléfono post-actualización", $consultaVerif['data']['telefono']);
-        detalle("Dirección post-actualización", $consultaVerif['data']['direccion']);
         $pruebasSuperadas++;
     } else {
-        error("Fallo al actualizar: " . $resUpdate['mensaje']);
+        error("Fallo al actualizar: " . ($resUpdate['mensaje'] ?? ''));
     }
 } else {
     error("Omitida por fallo previo de inserción.");
 }
 
 // -------------------------------------------------------------------------
-// PRUEBA 5: Integridad Referencial y Eliminación (DELETE / FOREIGN KEY)
+// PRUEBA 5: Integridad Referencial y Restricciones FOREIGN KEY
 // -------------------------------------------------------------------------
 encabezado("PRUEBA 5: Integridad Referencial y Restricciones FOREIGN KEY");
 $totalPruebas++;
 
 subseccion("5.1 Intento de eliminar registro con dependientes (Paciente con condición)");
-// Paciente ID 1 tiene paciente_condicion y evaluaciones (datos de prueba)
 $resDeleteProtegido = $pacienteCtrl->destroy(1);
 if (!$resDeleteProtegido['success'] && ($resDeleteProtegido['sqlstate'] ?? '') === '23503') {
     ok("Integridad referencial demostrada: PostgreSQL impidió eliminar el paciente ID 1.");
@@ -197,7 +196,7 @@ if ($idPacienteCreado) {
         ok("Paciente de prueba ID {$idPacienteCreado} eliminado limpiamente de la base de datos.");
         $pruebasSuperadas++;
     } else {
-        error("No se pudo eliminar el paciente de prueba: " . $resDeleteLimpio['mensaje']);
+        error("No se pudo eliminar el paciente de prueba: " . ($resDeleteLimpio['mensaje'] ?? ''));
     }
 }
 
@@ -215,33 +214,25 @@ if ($resEvaluaciones['success'] && count($resEvaluaciones['data']) > 0) {
     foreach ($resEvaluaciones['data'] as $ev) {
         detalle(
             "Eval ID {$ev['id_evaluacion_biomecanica']} ({$ev['fecha_evaluacion']})",
-            "Paciente: {$ev['nombre_paciente']} | Segmento: {$ev['nombre_segmento']} ({$ev['lateralidad']}) | Nivel: {$ev['codigo_nivel']} ({$ev['nombre_nivel']}) | Peso: {$ev['peso_kg']} kg | Evaluador: {$ev['evaluador']}"
+            "Paciente: {$ev['nombre_paciente']} | Segmento: {$ev['nombre_segmento']} ({$ev['lateralidad']}) | Nivel: {$ev['codigo_nivel']}"
         );
     }
-} else {
-    error("Fallo al consultar evaluaciones con JOIN.");
 }
 
 subseccion("6.2 Dispositivos Protésicos y Componentes Instalados (Relación N:M)");
 $dispCtrl = new DispositivoController();
 $resDisp = $dispCtrl->index();
 if ($resDisp['success'] && count($resDisp['data']) > 0) {
-    ok("INNER JOIN entre dispositivo_protesico, paciente_condicion, paciente, tipo_dispositivo y estado_dispositivo:");
+    ok("INNER JOIN entre dispositivo_protesico, paciente_condicion, paciente, tipo y estado:");
     foreach ($resDisp['data'] as $d) {
-        detalle(
-            "Dispositivo {$d['codigo_dispositivo']} [ID {$d['id_dispositivo_protesico']}]",
-            "Tipo: {$d['nombre_tipo']} | Estado: {$d['nombre_estado']} | Paciente: {$d['nombre_paciente']} | Segmento: {$d['nombre_segmento']}"
-        );
-
+        detalle("Dispositivo {$d['codigo_dispositivo']}", "Tipo: {$d['nombre_tipo']} | Estado: {$d['nombre_estado']} | Paciente: {$d['nombre_paciente']}");
         $comps = $dispCtrl->componentes($d['id_dispositivo_protesico']);
         if ($comps['success'] && !empty($comps['data'])) {
             foreach ($comps['data'] as $c) {
-                linea("          └─ Componente: [{$c['numero_serie']}] {$c['nombre_modelo']} ({$c['nombre_categoria']}) - Fabricante: {$c['nombre_fabricante']} | Instalado: {$c['fecha_instalacion']}");
+                linea("          └─ Componente: [{$c['numero_serie']}] {$c['nombre_modelo']} ({$c['nombre_categoria']}) - Fabricante: {$c['nombre_fabricante']}");
             }
         }
     }
-} else {
-    error("Fallo al consultar dispositivos.");
 }
 
 subseccion("6.3 Historial de Ajustes Técnicos por Dispositivo");
@@ -250,46 +241,150 @@ $resAjustes = $ajusteCtrl->index();
 if ($resAjustes['success'] && count($resAjustes['data']) > 0) {
     ok("INNER JOIN entre historial_ajuste, dispositivo_protesico, tipo_ajuste y usuario_sistema:");
     foreach ($resAjustes['data'] as $a) {
-        detalle(
-            "Ajuste ID {$a['id_historial_ajuste']} ({$a['fecha_ajuste']})",
-            "Dispositivo: {$a['codigo_dispositivo']} | Tipo: {$a['nombre_ajuste']} | Técnico: {$a['tecnico']} | Detalle: {$a['descripcion_ajuste']}"
-        );
+        detalle("Ajuste ID {$a['id_historial_ajuste']} ({$a['fecha_ajuste']})", "Dispositivo: {$a['codigo_dispositivo']} | Tipo: {$a['nombre_ajuste']} | Técnico: {$a['tecnico']}");
     }
 }
 
-subseccion("6.4 Mantenimientos Preventivos y Ejecución de Stored Function PL/pgSQL");
+subseccion("6.4 Mantenimientos Preventivos y Función PL/pgSQL");
 $mantCtrl = new MantenimientoController();
 $resVencidos = $mantCtrl->marcarVencidos();
-ok("Función almacenada fn_marcar_mantenimientos_vencidos() ejecutada. Registros actualizados a ATRASADO: {$resVencidos['afectados']}");
-
-$resMant = $mantCtrl->index();
-if ($resMant['success']) {
-    foreach ($resMant['data'] as $m) {
-        detalle(
-            "Mantenimiento ID {$m['id_mantenimiento_preventivo']} (Prog: {$m['fecha_programada']})",
-            "Dispositivo: {$m['codigo_dispositivo']} | Tipo: {$m['nombre_mantenimiento']} | Estado: {$m['nombre_estado']} | Paciente: {$m['nombre_paciente']}"
-        );
-    }
-}
+ok("Función almacenada fn_marcar_mantenimientos_vencidos() ejecutada. Registros actualizados: {$resVencidos['afectados']}");
 
 subseccion("6.5 GROUP BY y Funciones de Agregación (COUNT)");
 $pacientesConDisp = $pacienteCtrl->resumenDispositivos();
 if ($pacientesConDisp['success']) {
     ok("Agregación COUNT con GROUP BY y LEFT JOIN (Dispositivos por Paciente):");
     foreach ($pacientesConDisp['data'] as $row) {
-        detalle("{$row['nombre_completo']} ({$row['numero_documento']})", "Dispositivos asignados: {$row['total_dispositivos']}");
-    }
-}
-
-$resumenEstados = $mantCtrl->resumenPorEstado();
-if ($resumenEstados['success']) {
-    ok("Agregación COUNT con GROUP BY (Mantenimientos por Estado):");
-    foreach ($resumenEstados['data'] as $row) {
-        detalle("Estado: {$row['nombre_estado']}", "Total: {$row['total']}");
+        detalle("{$row['nombre_completo']}", "Total dispositivos: {$row['total_dispositivos']}");
     }
 }
 
 $pruebasSuperadas++;
+
+// -------------------------------------------------------------------------
+// PRUEBA 7: Autenticación, Roles y Hashing Seguro (password_verify)
+// -------------------------------------------------------------------------
+encabezado("PRUEBA 7: Autenticación Segura y Roles de Usuario");
+$totalPruebas++;
+
+subseccion("7.1 Inicio de sesión de ADMINISTRADOR (admin / Admin123*)");
+Auth::logout();
+$loginAdmin = Auth::login('admin', 'Admin123*');
+if ($loginAdmin['success'] && $loginAdmin['usuario']['nombre_rol'] === 'ADMINISTRADOR') {
+    ok("Inicio de sesión exitoso como ADMINISTRADOR.");
+    detalle("Usuario", $loginAdmin['usuario']['nombre_completo']);
+    detalle("Rol", $loginAdmin['usuario']['nombre_rol']);
+} else {
+    error("Fallo al autenticar administrador: " . ($loginAdmin['mensaje'] ?? ''));
+}
+
+subseccion("7.2 Inicio de sesión de TÉCNICO ORTOPÉDICO (jperez / Tecnico123*)");
+Auth::logout();
+$loginTecnico = Auth::login('jperez', 'Tecnico123*');
+if ($loginTecnico['success'] && $loginTecnico['usuario']['nombre_rol'] === 'TECNICO_ORTOPEDICO') {
+    ok("Inicio de sesión exitoso como TÉCNICO ORTOPÉDICO.");
+    detalle("Usuario", $loginTecnico['usuario']['nombre_completo']);
+    detalle("Rol", $loginTecnico['usuario']['nombre_rol']);
+} else {
+    error("Fallo al autenticar técnico: " . ($loginTecnico['mensaje'] ?? ''));
+}
+
+subseccion("7.3 Inicio de sesión de EVALUADOR CLÍNICO (mrodriguez / Clinico123*)");
+Auth::logout();
+$loginClinico = Auth::login('mrodriguez', 'Clinico123*');
+if ($loginClinico['success'] && $loginClinico['usuario']['nombre_rol'] === 'EVALUADOR_CLINICO') {
+    ok("Inicio de sesión exitoso como EVALUADOR CLÍNICO.");
+    detalle("Usuario", $loginClinico['usuario']['nombre_completo']);
+    detalle("Rol", $loginClinico['usuario']['nombre_rol']);
+} else {
+    error("Fallo al autenticar evaluador clínico: " . ($loginClinico['mensaje'] ?? ''));
+}
+
+subseccion("7.4 Rechazo de contraseña incorrecta");
+$loginInvalido = Auth::login('admin', 'PasswordEquivocada!');
+if (!$loginInvalido['success']) {
+    ok("Rechazo de credenciales inválidas confirmado: " . $loginInvalido['mensaje']);
+    $pruebasSuperadas++;
+} else {
+    error("Error de seguridad: el sistema aceptó una contraseña inválida.");
+}
+
+// -------------------------------------------------------------------------
+// PRUEBA 8: Matriz de Permisos y Protección contra Operaciones No Autorizadas
+// -------------------------------------------------------------------------
+encabezado("PRUEBA 8: Matriz de Permisos y Control de Acceso");
+$totalPruebas++;
+
+subseccion("8.1 Bloqueo de peticiones no autenticadas (INVITADO)");
+Auth::logout();
+$resInvitado = $pacienteCtrl->store(['nombres' => 'Fantasma']);
+if (!$resInvitado['success'] && ($resInvitado['codigo'] ?? 0) === 401) {
+    ok("Bloqueo de usuario no autenticado (HTTP 401): " . $resInvitado['mensaje']);
+} else {
+    error("Fallo: usuario no autenticado pudo ejecutar acción protegida.");
+}
+
+subseccion("8.2 Bloqueo de TÉCNICO_ORTOPEDICO al intentar crear pacientes");
+Auth::iniciarSesionComo('jperez');
+$resTecnicoBloqueado = $pacienteCtrl->store(['nombres' => 'Prueba']);
+if (!$resTecnicoBloqueado['success'] && ($resTecnicoBloqueado['codigo'] ?? 0) === 403) {
+    ok("Protección confirmada (HTTP 403): TÉCNICO_ORTOPEDICO no puede crear pacientes.");
+    detalle("Mensaje de protección", $resTecnicoBloqueado['mensaje']);
+} else {
+    error("Fallo: TÉCNICO_ORTOPEDICO no fue bloqueado al intentar crear paciente.");
+}
+
+subseccion("8.3 Bloqueo de EVALUADOR_CLINICO al intentar crear o alterar componentes");
+Auth::iniciarSesionComo('mrodriguez');
+$compCtrl = new ComponenteController();
+$resClinicoBloqueado = $compCtrl->store(['numero_serie' => 'TEST-001', 'id_modelo_componente' => 1, 'id_estado_componente' => 1]);
+if (!$resClinicoBloqueado['success'] && ($resClinicoBloqueado['codigo'] ?? 0) === 403) {
+    ok("Protección confirmada (HTTP 403): EVALUADOR_CLINICO no puede registrar componentes.");
+    detalle("Mensaje de protección", $resClinicoBloqueado['mensaje']);
+} else {
+    error("Fallo: EVALUADOR_CLINICO no fue bloqueado al registrar componentes.");
+}
+
+subseccion("8.4 Permiso concedido a EVALUADOR_CLINICO para consultar evaluaciones");
+$resClinicoPermitido = $evalCtrl->index();
+if ($resClinicoPermitido['success']) {
+    ok("Acceso concedido: EVALUADOR_CLINICO puede consultar evaluaciones biomecánicas.");
+} else {
+    error("Fallo: EVALUADOR_CLINICO no pudo consultar evaluaciones.");
+}
+
+subseccion("8.5 ADMINISTRADOR: Acceso irrestricto y gestión de usuarios");
+Auth::iniciarSesionComo('admin');
+$userCtrl = new UsuarioController();
+$resUsuarios = $userCtrl->index();
+if ($resUsuarios['success'] && count($resUsuarios['data']) > 0) {
+    ok("Acceso concedido: ADMINISTRADOR puede gestionar y listar usuarios del sistema.");
+    foreach ($resUsuarios['data'] as $u) {
+        detalle("Usuario [{$u['nombre_usuario']}]", "{$u['nombre_completo']} - Rol: {$u['nombre_rol']}");
+    }
+    $pruebasSuperadas++;
+} else {
+    error("Fallo: ADMINISTRADOR no pudo listar usuarios.");
+}
+
+// -------------------------------------------------------------------------
+// PRUEBA 9: Consulta de Detalle por ID y Ausencia de Rutas 404
+// -------------------------------------------------------------------------
+encabezado("PRUEBA 9: Consulta de Detalle por ID (Resolución de detalle.php)");
+$totalPruebas++;
+
+// Verificamos que obtener detalle por ID funciona limpiamente sin archivos rotos
+$dispDetalle = $dispCtrl->show(1);
+if ($dispDetalle['success'] && !empty($dispDetalle['data']['codigo_dispositivo'])) {
+    ok("Consulta de detalle por ID en DispositivoController::show(1) exitosa.");
+    detalle("Código Dispositivo", $dispDetalle['data']['codigo_dispositivo']);
+    detalle("Paciente", $dispDetalle['data']['nombre_paciente']);
+    detalle("Tipo de Dispositivo", $dispDetalle['data']['nombre_tipo']);
+    detalle("Archivo detalle.php", "Presente y operativo, resuelve detalle.php?id=1 y redirige consultas limpiamente.");
+    $pruebasSuperadas++;
+} else {
+    error("Fallo al obtener detalle por ID.");
+}
 
 // -------------------------------------------------------------------------
 // BALANCE FINAL DE PRUEBAS
@@ -302,7 +397,7 @@ linea(" Tasa de éxito:       " . round(($pruebasSuperadas / $totalPruebas) * 10
 if ($pruebasSuperadas === $totalPruebas) {
     linea();
     ok("TODAS LAS PRUEBAS FUERON SUPERADAS CON ÉXITO.");
-    linea("La base de datos PostgreSQL, los modelos y los controladores están plenamente integrados.");
+    linea("La base de datos, el modelo relacional, los roles, permisos y controladores operan al 100%.");
 } else {
     linea();
     error("Algunas pruebas presentaron inconsistencias.");

@@ -2,10 +2,12 @@
 /**
  * Controlador: ComponenteController
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
- * Responsabilidad: Coordinar validaciones y operaciones CRUD sobre componentes y piezas
+ * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre componentes y piezas
  */
 
 require_once __DIR__ . '/../models/Componente.php';
+require_once __DIR__ . '/../auth/Auth.php';
+require_once __DIR__ . '/../auth/Permisos.php';
 require_once __DIR__ . '/../includes/funciones.php';
 
 class ComponenteController {
@@ -19,6 +21,9 @@ class ComponenteController {
      * Lista componentes protésicos
      */
     public function index(?int $idEstado = null): array {
+        $errorPermiso = Auth::validarPermiso('componentes', 'listar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $componentes = $this->modelo->listar($idEstado);
             return [
@@ -39,6 +44,9 @@ class ComponenteController {
      * Muestra la información de un componente específico
      */
     public function show(int $id): array {
+        $errorPermiso = Auth::validarPermiso('componentes', 'ver');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $componente = $this->modelo->obtenerPorId($id);
             if (!$componente) {
@@ -65,6 +73,9 @@ class ComponenteController {
      * Valida y crea un nuevo componente físico
      */
     public function store(array $datos): array {
+        $errorPermiso = Auth::validarPermiso('componentes', 'crear');
+        if ($errorPermiso) return $errorPermiso;
+
         $requeridos = ['id_modelo_componente', 'id_estado_componente', 'numero_serie'];
         $faltantes = validar_campos_requeridos($datos, $requeridos);
 
@@ -97,6 +108,9 @@ class ComponenteController {
      * Valida y actualiza los datos de un componente
      */
     public function update(int $id, array $datos): array {
+        $errorPermiso = Auth::validarPermiso('componentes', 'editar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -136,6 +150,9 @@ class ComponenteController {
      * Elimina un componente respetando restricciones de integridad referencial
      */
     public function destroy(int $id): array {
+        $errorPermiso = Auth::validarPermiso('componentes', 'eliminar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -164,6 +181,9 @@ class ComponenteController {
      * Asocia e instala un componente en un dispositivo protésico
      */
     public function instalar(int $idComponente, int $idDispositivo, ?string $fechaInstalacion = null): array {
+        $errorPermiso = Auth::validarPermiso('componentes', 'instalar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $idDC = $this->modelo->instalarEnDispositivo($idComponente, $idDispositivo, $fechaInstalacion);
             return [
@@ -185,6 +205,9 @@ class ComponenteController {
      * Consulta piezas y modelos compatibles
      */
     public function compatibles(int $idModelo): array {
+        $errorPermiso = Auth::validarPermiso('componentes', 'compatibles');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $compatibles = $this->modelo->obtenerCompatibles($idModelo);
             return [

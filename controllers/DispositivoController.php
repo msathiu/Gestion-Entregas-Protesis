@@ -2,10 +2,12 @@
 /**
  * Controlador: DispositivoController
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
- * Responsabilidad: Coordinar validaciones y operaciones CRUD sobre dispositivos protésicos
+ * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre dispositivos protésicos
  */
 
 require_once __DIR__ . '/../models/Dispositivo.php';
+require_once __DIR__ . '/../auth/Auth.php';
+require_once __DIR__ . '/../auth/Permisos.php';
 require_once __DIR__ . '/../includes/funciones.php';
 
 class DispositivoController {
@@ -19,6 +21,9 @@ class DispositivoController {
      * Lista los dispositivos protésicos registrados
      */
     public function index(?int $idEstado = null): array {
+        $errorPermiso = Auth::validarPermiso('dispositivos', 'listar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $dispositivos = $this->modelo->listar($idEstado);
             return [
@@ -39,6 +44,9 @@ class DispositivoController {
      * Muestra la información de un dispositivo protésico específico
      */
     public function show(int $id): array {
+        $errorPermiso = Auth::validarPermiso('dispositivos', 'ver');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $dispositivo = $this->modelo->obtenerPorId($id);
             if (!$dispositivo) {
@@ -65,6 +73,9 @@ class DispositivoController {
      * Valida y crea un nuevo dispositivo protésico
      */
     public function store(array $datos): array {
+        $errorPermiso = Auth::validarPermiso('dispositivos', 'crear');
+        if ($errorPermiso) return $errorPermiso;
+
         $requeridos = ['id_paciente_condicion', 'id_evaluacion_biomecanica', 'id_tipo_dispositivo', 'id_estado_dispositivo', 'codigo_dispositivo'];
         $faltantes = validar_campos_requeridos($datos, $requeridos);
 
@@ -97,6 +108,9 @@ class DispositivoController {
      * Valida y actualiza los datos de un dispositivo protésico
      */
     public function update(int $id, array $datos): array {
+        $errorPermiso = Auth::validarPermiso('dispositivos', 'editar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -105,7 +119,7 @@ class DispositivoController {
             ];
         }
 
-        $requeridos = ['id_paciente_condicion', 'id_evaluacion_biomecanica', 'id_tipo_dispositivo', 'id_estado_dispositivo', 'codigo_dispositivo'];
+        $requeridos = ['id_tipo_dispositivo', 'id_estado_dispositivo', 'codigo_dispositivo'];
         $faltantes = validar_campos_requeridos($datos, $requeridos);
 
         if (!empty($faltantes)) {
@@ -136,6 +150,9 @@ class DispositivoController {
      * Elimina un dispositivo protésico respetando restricciones de integridad referencial
      */
     public function destroy(int $id): array {
+        $errorPermiso = Auth::validarPermiso('dispositivos', 'eliminar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -164,6 +181,9 @@ class DispositivoController {
      * Lista los componentes instalados en el dispositivo
      */
     public function componentes(int $idDispositivo): array {
+        $errorPermiso = Auth::validarPermiso('dispositivos', 'componentes');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $componentes = $this->modelo->obtenerComponentes($idDispositivo);
             return [
@@ -184,6 +204,9 @@ class DispositivoController {
      * Actualiza el estado operativo del dispositivo
      */
     public function cambiarEstado(int $idDispositivo, int $idNuevoEstado): array {
+        $errorPermiso = Auth::validarPermiso('dispositivos', 'cambiar_estado');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $ok = $this->modelo->cambiarEstado($idDispositivo, $idNuevoEstado);
             return [

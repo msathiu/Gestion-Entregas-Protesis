@@ -2,10 +2,12 @@
 /**
  * Controlador: EvaluacionController
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
- * Responsabilidad: Coordinar validaciones y operaciones CRUD sobre evaluaciones biomecánicas
+ * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre evaluaciones biomecánicas
  */
 
 require_once __DIR__ . '/../models/Evaluacion.php';
+require_once __DIR__ . '/../auth/Auth.php';
+require_once __DIR__ . '/../auth/Permisos.php';
 require_once __DIR__ . '/../includes/funciones.php';
 
 class EvaluacionController {
@@ -19,6 +21,9 @@ class EvaluacionController {
      * Lista evaluaciones biomecánicas registradas
      */
     public function index(?int $idPaciente = null): array {
+        $errorPermiso = Auth::validarPermiso('evaluaciones', 'listar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $evaluaciones = $this->modelo->listar($idPaciente);
             return [
@@ -39,6 +44,9 @@ class EvaluacionController {
      * Muestra una evaluación biomecánica por ID
      */
     public function show(int $id): array {
+        $errorPermiso = Auth::validarPermiso('evaluaciones', 'ver');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $evaluacion = $this->modelo->obtenerPorId($id);
             if (!$evaluacion) {
@@ -65,6 +73,9 @@ class EvaluacionController {
      * Valida y registra una nueva evaluación biomecánica
      */
     public function store(array $datos): array {
+        $errorPermiso = Auth::validarPermiso('evaluaciones', 'crear');
+        if ($errorPermiso) return $errorPermiso;
+
         $requeridos = ['id_paciente_condicion', 'id_nivel_actividad', 'id_usuario_sistema_evaluador', 'fecha_evaluacion', 'peso_kg', 'altura_cm'];
         $faltantes = validar_campos_requeridos($datos, $requeridos);
 
@@ -97,6 +108,9 @@ class EvaluacionController {
      * Valida y actualiza los datos de una evaluación
      */
     public function update(int $id, array $datos): array {
+        $errorPermiso = Auth::validarPermiso('evaluaciones', 'editar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -136,6 +150,9 @@ class EvaluacionController {
      * Elimina una evaluación biomecánica
      */
     public function destroy(int $id): array {
+        $errorPermiso = Auth::validarPermiso('evaluaciones', 'eliminar');
+        if ($errorPermiso) return $errorPermiso;
+
         $existente = $this->modelo->obtenerPorId($id);
         if (!$existente) {
             return [
@@ -164,6 +181,9 @@ class EvaluacionController {
      * Obtiene las medidas anatómicas asociadas a una evaluación
      */
     public function medidas(int $idEvaluacion): array {
+        $errorPermiso = Auth::validarPermiso('evaluaciones', 'medidas');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $medidas = $this->modelo->obtenerMedidas($idEvaluacion);
             return [
@@ -184,6 +204,9 @@ class EvaluacionController {
      * Registra una medida anatómica en una evaluación
      */
     public function registrarMedida(int $idEvaluacion, int $idTipoMedida, float $valor): array {
+        $errorPermiso = Auth::validarPermiso('evaluaciones', 'editar');
+        if ($errorPermiso) return $errorPermiso;
+
         try {
             $idMedida = $this->modelo->registrarMedida($idEvaluacion, $idTipoMedida, $valor);
             return [
