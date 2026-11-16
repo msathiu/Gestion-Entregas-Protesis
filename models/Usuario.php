@@ -2,7 +2,6 @@
 /**
  * Modelo: Usuario del Sistema
  * Tabla: usuario_sistema
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  */
 
 require_once __DIR__ . '/../config/database.php';

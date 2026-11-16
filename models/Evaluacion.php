@@ -2,7 +2,7 @@
 /**
  * Modelo: Evaluación Biomecánica
  * Tabla: evaluacion_biomecanica
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+
  */
 
 require_once __DIR__ . '/../config/database.php';

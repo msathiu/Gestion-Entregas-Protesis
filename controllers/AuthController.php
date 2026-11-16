@@ -1,7 +1,7 @@
 <?php
 /**
  * Controlador: AuthController
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+
  * Responsabilidad: Gestión de inicio/cierre de sesión y verificación de permisos del usuario activo
  */
 

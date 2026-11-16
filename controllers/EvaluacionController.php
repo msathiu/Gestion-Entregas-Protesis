@@ -1,7 +1,6 @@
 <?php
 /**
  * Controlador: EvaluacionController
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre evaluaciones biomecánicas
  */
 

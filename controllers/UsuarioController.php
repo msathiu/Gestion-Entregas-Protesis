@@ -1,7 +1,7 @@
 <?php
 /**
  * Controlador: UsuarioController
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+
  * Responsabilidad: Gestión administrativa de usuarios y asignación de roles
  */
 

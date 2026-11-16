@@ -1,7 +1,7 @@
 <?php
 /**
  * Controlador: PacienteController
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+
  * Responsabilidad: Coordinar validaciones, permisos y operaciones CRUD sobre pacientes
  */
 
