@@ -13,7 +13,7 @@ class Database {
     public static function getConnection(): PDO {
         if (self::$instance === null) {
             $host = getenv('DB_HOST') ?: 'db';
-            $port = getenv('DB_PORT') ?: '5433';
+            $port = getenv('DB_PORT') ?: '5432'; // Por defecto 5432 en docker/postgres
             $name = getenv('DB_NAME') ?: 'protesis_ortesis';
             $user = getenv('DB_USER') ?: 'postgres';
             $pass = getenv('DB_PASSWORD') ?: 'postgres_secure_password';
@@ -30,11 +30,13 @@ class Database {
                 self::$instance = new PDO($dsn, $user, $pass, $options);
 
                 // Configurar usuario de aplicación por defecto para auditoría en PostgreSQL
-                // (Requerido por los triggers de bitácora y auditoría del esquema)
                 self::$instance->exec("SET app.id_usuario_sistema = '1';");
 
-                // Asegurar existencia de las tablas de registro y asignación de piezas (pieza, entrega_pieza, tipo_pieza)
+                // Asegurar existencia de las tablas de registro y asignación de piezas
                 self::asegurarTablasProtesis(self::$instance);
+
+                // Asegurar usuarios base en usuario_sistema utilizando columnas existentes
+                self::asegurarUsuariosBase(self::$instance);
             } catch (PDOException $e) {
                 throw new Exception("Error al conectar con la base de datos PostgreSQL: " . $e->getMessage(), (int)$e->getCode());
             }
@@ -69,6 +71,8 @@ class Database {
                 'message' => $e->getMessage()
             ];
         }
+    }
+
     /**
      * Asegura la creación de las tablas de registro y asignación de piezas protésicas
      * Garantiza compatibilidad sin que fallen las consultas
@@ -115,21 +119,21 @@ class Database {
 
             -- Tabla 1: Registro de Piezas Protésicas
             CREATE TABLE IF NOT EXISTS pieza (
-                id_pieza            SERIAL PRIMARY KEY,
-                codigo_pieza        VARCHAR(50) NOT NULL UNIQUE,
-                nombre_pieza        VARCHAR(150) NOT NULL,
-                id_tipo_pieza       INTEGER NOT NULL REFERENCES tipo_pieza(id_tipo_pieza) ON DELETE RESTRICT,
-                id_fabricante       INTEGER NOT NULL REFERENCES fabricante(id_fabricante) ON DELETE RESTRICT,
-                numero_serie        VARCHAR(60) NOT NULL UNIQUE,
-                estado              VARCHAR(30) NOT NULL DEFAULT 'DISPONIBLE'
-                                    CHECK (estado IN ('DISPONIBLE', 'ENTREGADA', 'EN_MANTENIMIENTO', 'DE_BAJA')),
-                costo               NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo >= 0),
-                descripcion         TEXT,
-                fecha_registro      DATE NOT NULL DEFAULT CURRENT_DATE,
-                fecha_creacion      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                fecha_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                usuario_creacion    INTEGER NOT NULL DEFAULT 1,
-                usuario_actualizacion INTEGER NOT NULL DEFAULT 1
+                id_pieza                SERIAL PRIMARY KEY,
+                codigo_pieza            VARCHAR(50) NOT NULL UNIQUE,
+                nombre_pieza            VARCHAR(150) NOT NULL,
+                id_tipo_pieza           INTEGER NOT NULL REFERENCES tipo_pieza(id_tipo_pieza) ON DELETE RESTRICT,
+                id_fabricante           INTEGER NOT NULL REFERENCES fabricante(id_fabricante) ON DELETE RESTRICT,
+                numero_serie            VARCHAR(60) NOT NULL UNIQUE,
+                estado                  VARCHAR(30) NOT NULL DEFAULT 'DISPONIBLE'
+                                        CHECK (estado IN ('DISPONIBLE', 'ENTREGADA', 'EN_MANTENIMIENTO', 'DE_BAJA')),
+                costo                   NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo >= 0),
+                descripcion             TEXT,
+                fecha_registro          DATE NOT NULL DEFAULT CURRENT_DATE,
+                fecha_creacion          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                fecha_actualizacion     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                usuario_creacion        INTEGER NOT NULL DEFAULT 1,
+                usuario_actualizacion   INTEGER NOT NULL DEFAULT 1
             );
 
             INSERT INTO pieza (codigo_pieza, nombre_pieza, id_tipo_pieza, id_fabricante, numero_serie, estado, costo, descripcion, fecha_registro)
@@ -150,19 +154,19 @@ class Database {
 
             -- Tabla 2: Asignación y Entrega de Piezas Protésicas
             CREATE TABLE IF NOT EXISTS entrega_pieza (
-                id_entrega          SERIAL PRIMARY KEY,
-                id_paciente         INTEGER NOT NULL REFERENCES paciente(id_paciente) ON DELETE RESTRICT,
-                id_pieza            INTEGER NOT NULL REFERENCES pieza(id_pieza) ON DELETE RESTRICT,
-                id_usuario_sistema  INTEGER NOT NULL REFERENCES usuario_sistema(id_usuario_sistema) ON DELETE RESTRICT,
-                fecha_entrega       DATE NOT NULL DEFAULT CURRENT_DATE,
-                estado_entrega      VARCHAR(30) NOT NULL DEFAULT 'ENTREGADO'
-                                    CHECK (estado_entrega IN ('ENTREGADO', 'EN_PRUEBAS', 'DEVUELTO', 'DADO_DE_BAJA')),
-                observaciones       TEXT,
-                fecha_registro      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                fecha_creacion      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                fecha_actualizacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                usuario_creacion    INTEGER NOT NULL DEFAULT 1,
-                usuario_actualizacion INTEGER NOT NULL DEFAULT 1
+                id_entrega              SERIAL PRIMARY KEY,
+                id_paciente             INTEGER NOT NULL REFERENCES paciente(id_paciente) ON DELETE RESTRICT,
+                id_pieza                INTEGER NOT NULL REFERENCES pieza(id_pieza) ON DELETE RESTRICT,
+                id_usuario_sistema      INTEGER NOT NULL REFERENCES usuario_sistema(id_usuario_sistema) ON DELETE RESTRICT,
+                fecha_entrega           DATE NOT NULL DEFAULT CURRENT_DATE,
+                estado_entrega          VARCHAR(30) NOT NULL DEFAULT 'ENTREGADO'
+                                        CHECK (estado_entrega IN ('ENTREGADO', 'EN_PRUEBAS', 'DEVUELTO', 'DADO_DE_BAJA')),
+                observaciones           TEXT,
+                fecha_registro          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                fecha_creacion          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                fecha_actualizacion     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                usuario_creacion        INTEGER NOT NULL DEFAULT 1,
+                usuario_actualizacion   INTEGER NOT NULL DEFAULT 1
             );
 
             INSERT INTO entrega_pieza (id_paciente, id_pieza, id_usuario_sistema, fecha_entrega, estado_entrega, observaciones)
@@ -181,7 +185,38 @@ SQL;
             error_log("Aviso en asegurarTablasProtesis: " . $e->getMessage());
         }
     }
-}
+
+    /**
+     * Asegura la presencia de los usuarios base (admin, mrodriguez) sin alterar
+     * ni agregar columnas a la tabla usuario_sistema
+     */
+    private static function asegurarUsuariosBase(PDO $db): void {
+        try {
+            // Asegurar roles base
+            $db->exec("
+                INSERT INTO rol (nombre_rol, descripcion) VALUES 
+                    ('ADMINISTRADOR',      'Acceso total al sistema y administración de usuarios'),
+                    ('TECNICO_ORTOPEDICO', 'Gestión de piezas protésicas y entregas'),
+                    ('EVALUADOR_CLINICO',  'Evaluaciones biomecánicas y registro de pacientes')
+                ON CONFLICT (nombre_rol) DO NOTHING;
+
+                -- Asegurar usuario administrador usando solo columnas existentes
+                INSERT INTO usuario_sistema (id_rol, nombre_usuario, nombre_completo, correo, activo)
+                SELECT (SELECT id_rol FROM rol WHERE nombre_rol = 'ADMINISTRADOR' LIMIT 1),
+                       'admin', 'Administrador del Sistema', 'admin@protesis.local', TRUE
+                WHERE NOT EXISTS (SELECT 1 FROM usuario_sistema WHERE nombre_usuario = 'admin');
+
+                -- Asegurar usuario evaluador clínico usando solo columnas existentes
+                INSERT INTO usuario_sistema (id_rol, nombre_usuario, nombre_completo, correo, activo)
+                SELECT (SELECT id_rol FROM rol WHERE nombre_rol = 'EVALUADOR_CLINICO' LIMIT 1),
+                       'mrodriguez', 'Dra. Mariana Rodríguez', 'mrodriguez@protesis.local', TRUE
+                WHERE NOT EXISTS (SELECT 1 FROM usuario_sistema WHERE nombre_usuario = 'mrodriguez');
+            ");
+        } catch (Throwable $e) {
+            error_log("Aviso en asegurarUsuariosBase: " . $e->getMessage());
+        }
+    }
+} // <-- Fin de la clase Database
 
 /**
  * Función auxiliar para obtener la conexión PDO rápidamente

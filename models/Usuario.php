@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../auth/Auth.php';
 
 class Usuario {
     private PDO $db;
@@ -59,8 +60,9 @@ class Usuario {
      * Obtiene un usuario con su hash de contraseña para autenticación
      */
     public function obtenerPorNombreUsuario(string $nombreUsuario): ?array {
+        $columnaHash = Auth::tieneColumnaClaveHash($this->db) ? ', u.clave_hash' : '';
         $sql = "SELECT u.id_usuario_sistema, u.id_rol, u.nombre_usuario, u.nombre_completo,
-                       u.correo, u.clave_hash, u.activo,
+                       u.correo{$columnaHash}, u.activo,
                        r.nombre_rol, r.descripcion AS descripcion_rol
                 FROM usuario_sistema u
                 INNER JOIN rol r ON r.id_rol = u.id_rol
@@ -70,6 +72,10 @@ class Usuario {
         $stmt->execute([':usuario' => trim($nombreUsuario)]);
         $res = $stmt->fetch();
 
+        if ($res && !isset($res['clave_hash'])) {
+            $res['clave_hash'] = Auth::obtenerHashUsuario($res['nombre_usuario']);
+        }
+
         return $res ?: null;
     }
 
@@ -78,22 +84,42 @@ class Usuario {
      */
     public function crear(array $datos): int {
         $claveHash = password_hash($datos['clave'], PASSWORD_DEFAULT);
+        $tieneColumna = Auth::tieneColumnaClaveHash($this->db);
 
-        $sql = "INSERT INTO usuario_sistema (
-                    id_rol, nombre_usuario, nombre_completo, correo, clave_hash, activo
-                ) VALUES (
-                    :id_rol, :nombre_usuario, :nombre_completo, :correo, :clave_hash, :activo
-                ) RETURNING id_usuario_sistema";
+        if ($tieneColumna) {
+            $sql = "INSERT INTO usuario_sistema (
+                        id_rol, nombre_usuario, nombre_completo, correo, clave_hash, activo
+                    ) VALUES (
+                        :id_rol, :nombre_usuario, :nombre_completo, :correo, :clave_hash, :activo
+                    ) RETURNING id_usuario_sistema";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            ':id_rol'          => $datos['id_rol'],
-            ':nombre_usuario'  => strtolower(trim($datos['nombre_usuario'])),
-            ':nombre_completo' => trim($datos['nombre_completo']),
-            ':correo'          => strtolower(trim($datos['correo'])),
-            ':clave_hash'      => $claveHash,
-            ':activo'          => $datos['activo'] ?? true
-        ]);
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':id_rol'          => $datos['id_rol'],
+                ':nombre_usuario'  => strtolower(trim($datos['nombre_usuario'])),
+                ':nombre_completo' => trim($datos['nombre_completo']),
+                ':correo'          => strtolower(trim($datos['correo'])),
+                ':clave_hash'      => $claveHash,
+                ':activo'          => $datos['activo'] ?? true
+            ]);
+        } else {
+            $sql = "INSERT INTO usuario_sistema (
+                        id_rol, nombre_usuario, nombre_completo, correo, activo
+                    ) VALUES (
+                        :id_rol, :nombre_usuario, :nombre_completo, :correo, :activo
+                    ) RETURNING id_usuario_sistema";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':id_rol'          => $datos['id_rol'],
+                ':nombre_usuario'  => strtolower(trim($datos['nombre_usuario'])),
+                ':nombre_completo' => trim($datos['nombre_completo']),
+                ':correo'          => strtolower(trim($datos['correo'])),
+                ':activo'          => $datos['activo'] ?? true
+            ]);
+
+            Auth::guardarHashUsuario(strtolower(trim($datos['nombre_usuario'])), $claveHash);
+        }
 
         return (int)$stmt->fetchColumn();
     }
@@ -125,8 +151,16 @@ class Usuario {
 
         // Si se suministra una nueva contraseña, se recalcula el hash
         if (!empty($datos['clave'])) {
-            $sql .= ", clave_hash = :clave_hash";
-            $params[':clave_hash'] = password_hash($datos['clave'], PASSWORD_DEFAULT);
+            $claveHash = password_hash($datos['clave'], PASSWORD_DEFAULT);
+            if (Auth::tieneColumnaClaveHash($this->db)) {
+                $sql .= ", clave_hash = :clave_hash";
+                $params[':clave_hash'] = $claveHash;
+            } else {
+                $u = $this->obtenerPorId($id);
+                if ($u) {
+                    Auth::guardarHashUsuario($u['nombre_usuario'], $claveHash);
+                }
+            }
         }
 
         $sql .= " WHERE id_usuario_sistema = :id";
