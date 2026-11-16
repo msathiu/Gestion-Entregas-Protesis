@@ -130,6 +130,21 @@ class Dispositivo {
     }
 
     /**
+     * Actualiza el estado operativo del dispositivo
+     * Demuestra: UPDATE directo sobre columna FK de estado
+     */
+    public function cambiarEstado(int $id, int $idNuevoEstado): bool {
+        $sql = "UPDATE dispositivo_protesico 
+                SET id_estado_dispositivo = :id_estado 
+                WHERE id_dispositivo_protesico = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':id_estado' => $idNuevoEstado,
+            ':id'        => $id,
+        ]);
+    }
+
+    /**
      * Elimina un dispositivo respetando integridad referencial
      * Demuestra: DELETE
      */
@@ -160,5 +175,40 @@ class Dispositivo {
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id' => $idDispositivo]);
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Catálogo: Tipos de dispositivos protésicos y ortésicos
+     */
+    public function listarTipos(): array {
+        $sql = "SELECT id_tipo_dispositivo, nombre_tipo, categoria_dispositivo 
+                FROM tipo_dispositivo 
+                ORDER BY id_tipo_dispositivo ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Estados operativos del dispositivo
+     */
+    public function listarEstados(): array {
+        $sql = "SELECT id_estado_dispositivo, nombre_estado 
+                FROM estado_dispositivo 
+                ORDER BY id_estado_dispositivo ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Evaluaciones clínicas disponibles para asociar a una orden de dispositivo
+     */
+    public function listarEvaluacionesDisponibles(): array {
+        $sql = "SELECT eb.id_evaluacion_biomecanica, eb.id_paciente_condicion, eb.fecha_evaluacion,
+                       p.numero_documento, p.nombres || ' ' || p.apellidos AS nombre_paciente,
+                       sc.nombre_segmento, pc.lateralidad
+                FROM evaluacion_biomecanica eb
+                INNER JOIN paciente_condicion pc ON pc.id_paciente_condicion = eb.id_paciente_condicion
+                INNER JOIN paciente p            ON p.id_paciente            = pc.id_paciente
+                INNER JOIN segmento_corporal sc  ON sc.id_segmento_corporal  = pc.id_segmento_corporal
+                ORDER BY eb.fecha_evaluacion DESC, eb.id_evaluacion_biomecanica DESC";
+        return $this->db->query($sql)->fetchAll();
     }
 }

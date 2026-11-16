@@ -222,4 +222,15 @@ class DispositivoController {
             ];
         }
     }
+
+    /**
+     * Catálogos para formularios de dispositivos
+     */
+    public function catalogos(): array {
+        return [
+            'tipos'        => $this->modelo->listarTipos(),
+            'estados'      => $this->modelo->listarEstados(),
+            'evaluaciones' => $this->modelo->listarEvaluacionesDisponibles(),
+        ];
+    }
 }

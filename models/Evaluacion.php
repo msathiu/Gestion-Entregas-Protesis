@@ -150,4 +150,39 @@ class Evaluacion {
         $stmt->execute([':id' => $idEvaluacion]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Catálogo: Pacientes y sus condiciones para listas desplegables
+     */
+    public function listarCondicionesPacientes(): array {
+        $sql = "SELECT pc.id_paciente_condicion, p.id_paciente, p.numero_documento,
+                       p.nombres || ' ' || p.apellidos AS nombre_paciente,
+                       sc.nombre_segmento, pc.lateralidad
+                FROM paciente_condicion pc
+                INNER JOIN paciente p           ON p.id_paciente           = pc.id_paciente
+                INNER JOIN segmento_corporal sc ON sc.id_segmento_corporal = pc.id_segmento_corporal
+                WHERE p.activo = TRUE
+                ORDER BY p.apellidos ASC, p.nombres ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Niveles de actividad K-Level
+     */
+    public function listarNivelesActividad(): array {
+        $sql = "SELECT id_nivel_actividad, codigo_nivel, nombre_nivel, factor_desgaste 
+                FROM nivel_actividad 
+                ORDER BY id_nivel_actividad ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Tipos de medidas anatómicas
+     */
+    public function listarTiposMedida(): array {
+        $sql = "SELECT id_tipo_medida, nombre_medida, unidad_medida, descripcion 
+                FROM tipo_medida 
+                ORDER BY id_tipo_medida ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
 }

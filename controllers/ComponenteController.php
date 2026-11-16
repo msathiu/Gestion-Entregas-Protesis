@@ -223,4 +223,15 @@ class ComponenteController {
             ];
         }
     }
+
+    /**
+     * Catálogos para formularios de componentes
+     */
+    public function catalogos(): array {
+        return [
+            'modelos'      => $this->modelo->listarModelos(),
+            'estados'      => $this->modelo->listarEstados(),
+            'dispositivos' => $this->modelo->listarDispositivosActivos(),
+        ];
+    }
 }

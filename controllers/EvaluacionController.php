@@ -223,4 +223,15 @@ class EvaluacionController {
             ];
         }
     }
+
+    /**
+     * Catálogos requeridos para formularios de evaluación
+     */
+    public function catalogos(): array {
+        return [
+            'condiciones' => $this->modelo->listarCondicionesPacientes(),
+            'niveles'     => $this->modelo->listarNivelesActividad(),
+            'tiposMedida' => $this->modelo->listarTiposMedida(),
+        ];
+    }
 }

@@ -222,4 +222,16 @@ class MantenimientoController {
             ];
         }
     }
+
+    /**
+     * Catálogos para el módulo de mantenimientos
+     */
+    public function catalogos(): array {
+        return [
+            'tipos'        => $this->modelo->listarTipos(),
+            'estados'      => $this->modelo->listarEstados(),
+            'dispositivos' => $this->modelo->listarDispositivos(),
+            'tecnicos'     => $this->modelo->listarTecnicos(),
+        ];
+    }
 }

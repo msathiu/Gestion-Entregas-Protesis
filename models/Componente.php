@@ -171,4 +171,40 @@ class Componente {
         $stmt->execute([':id_modelo' => $idModelo]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Catálogo: Modelos de componentes con fabricante y categoría
+     */
+    public function listarModelos(): array {
+        $sql = "SELECT mc.id_modelo_componente, mc.nombre_modelo, mc.vida_util_horas,
+                       f.nombre_fabricante, cat.nombre_categoria
+                FROM modelo_componente mc
+                INNER JOIN fabricante f              ON f.id_fabricante             = mc.id_fabricante
+                INNER JOIN categoria_componente cat  ON cat.id_categoria_componente = mc.id_categoria_componente
+                ORDER BY mc.nombre_modelo ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Estados físicos del componente
+     */
+    public function listarEstados(): array {
+        $sql = "SELECT id_estado_componente, nombre_estado 
+                FROM estado_componente 
+                ORDER BY id_estado_componente ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Dispositivos aptos para recibir instalación de piezas
+     */
+    public function listarDispositivosActivos(): array {
+        $sql = "SELECT dp.id_dispositivo_protesico, dp.codigo_dispositivo,
+                       p.nombres || ' ' || p.apellidos AS paciente
+                FROM dispositivo_protesico dp
+                INNER JOIN paciente_condicion pc ON pc.id_paciente_condicion = dp.id_paciente_condicion
+                INNER JOIN paciente p            ON p.id_paciente            = pc.id_paciente
+                ORDER BY dp.codigo_dispositivo ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
 }

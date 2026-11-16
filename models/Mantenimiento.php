@@ -167,4 +167,49 @@ class Mantenimiento {
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Catálogo: Tipos de mantenimiento preventivo
+     */
+    public function listarTipos(): array {
+        $sql = "SELECT id_tipo_mantenimiento, nombre_mantenimiento, intervalo_dias_sugerido 
+                FROM tipo_mantenimiento 
+                ORDER BY id_tipo_mantenimiento ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Estados del mantenimiento
+     */
+    public function listarEstados(): array {
+        $sql = "SELECT id_estado_mantenimiento, nombre_estado 
+                FROM estado_mantenimiento 
+                ORDER BY id_estado_mantenimiento ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Dispositivos para vincular mantenimiento
+     */
+    public function listarDispositivos(): array {
+        $sql = "SELECT dp.id_dispositivo_protesico, dp.codigo_dispositivo,
+                       p.nombres || ' ' || p.apellidos AS paciente
+                FROM dispositivo_protesico dp
+                INNER JOIN paciente_condicion pc ON pc.id_paciente_condicion = dp.id_paciente_condicion
+                INNER JOIN paciente p            ON p.id_paciente            = pc.id_paciente
+                ORDER BY dp.codigo_dispositivo ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Técnicos habilitados para mantenimiento
+     */
+    public function listarTecnicos(): array {
+        $sql = "SELECT u.id_usuario_sistema, u.nombre_completo
+                FROM usuario_sistema u
+                INNER JOIN rol r ON r.id_rol = u.id_rol
+                WHERE r.nombre_rol IN ('TECNICO_ORTOPEDICO', 'ADMINISTRADOR') AND u.activo = TRUE
+                ORDER BY u.nombre_completo ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
 }

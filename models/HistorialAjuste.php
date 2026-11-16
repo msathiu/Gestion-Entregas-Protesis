@@ -148,4 +148,25 @@ class HistorialAjuste {
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Catálogo: Tipos de ajustes ortopédicos
+     */
+    public function listarTiposAjuste(): array {
+        $sql = "SELECT id_tipo_ajuste, nombre_ajuste FROM tipo_ajuste ORDER BY id_tipo_ajuste ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Catálogo: Dispositivos para vincular ajustes
+     */
+    public function listarDispositivos(): array {
+        $sql = "SELECT dp.id_dispositivo_protesico, dp.codigo_dispositivo,
+                       p.nombres || ' ' || p.apellidos AS paciente
+                FROM dispositivo_protesico dp
+                INNER JOIN paciente_condicion pc ON pc.id_paciente_condicion = dp.id_paciente_condicion
+                INNER JOIN paciente p            ON p.id_paciente            = pc.id_paciente
+                ORDER BY dp.codigo_dispositivo ASC";
+        return $this->db->query($sql)->fetchAll();
+    }
 }

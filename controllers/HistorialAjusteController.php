@@ -199,4 +199,14 @@ class HistorialAjusteController {
             ];
         }
     }
+
+    /**
+     * Catálogos para el formulario de ajustes
+     */
+    public function catalogos(): array {
+        return [
+            'tipos'        => $this->modelo->listarTiposAjuste(),
+            'dispositivos' => $this->modelo->listarDispositivos(),
+        ];
+    }
 }

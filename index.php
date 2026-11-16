@@ -1,10 +1,7 @@
 <?php
 /**
- * Punto de Entrada Principal: Sistema de Gestión de Prótesis y Órtesis
+ * Vista de Inicio (Dashboard Principal)
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
- *
- * Arquitectura Backend, Conectividad PostgreSQL, Roles, Permisos y Controladores CRUD
- * (Sin interfaz gráfica / Sin vistas HTML según especificación)
  */
 
 require_once __DIR__ . '/config/database.php';
@@ -12,193 +9,243 @@ require_once __DIR__ . '/includes/funciones.php';
 require_once __DIR__ . '/auth/Auth.php';
 require_once __DIR__ . '/auth/Permisos.php';
 
-// Controladores
-require_once __DIR__ . '/controllers/UsuarioController.php';
-require_once __DIR__ . '/controllers/PacienteController.php';
-require_once __DIR__ . '/controllers/EvaluacionController.php';
-require_once __DIR__ . '/controllers/DispositivoController.php';
-require_once __DIR__ . '/controllers/ComponenteController.php';
-require_once __DIR__ . '/controllers/HistorialAjusteController.php';
-require_once __DIR__ . '/controllers/MantenimientoController.php';
-require_once __DIR__ . '/controllers/AuthController.php';
-
+// Si es ejecución CLI o solicitud explícita de JSON / API
 $esJson = (isset($_GET['format']) && $_GET['format'] === 'json') ||
           (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
 
-// -------------------------------------------------------------------------
-// SOPORTE PARA CONSULTA DE DETALLE POR ID (Rutas /index.php?modulo=...&id=...)
-// -------------------------------------------------------------------------
-if (isset($_GET['id']) && is_numeric($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    $modulo = strtolower($_GET['modulo'] ?? 'dispositivos');
-
-    // Para fines de consulta académica si no hay sesión activa iniciamos temporalmente como admin
-    if (!Auth::estaAutenticado()) {
-        Auth::iniciarSesionComo('admin');
-    }
-
-    $controlador = match ($modulo) {
-        'pacientes'      => new PacienteController(),
-        'evaluaciones'   => new EvaluacionController(),
-        'dispositivos'   => new DispositivoController(),
-        'componentes'    => new ComponenteController(),
-        'ajustes'        => new HistorialAjusteController(),
-        'mantenimientos' => new MantenimientoController(),
-        'usuarios'       => new UsuarioController(),
-        default          => null
-    };
-
-    if ($controlador) {
-        $resultado = $controlador->show($id);
-        if ($esJson) json_response($resultado, $resultado['success'] ? 200 : 404);
-
-        header('Content-Type: text/plain; charset=utf-8');
-        echo "===========================================================================\n";
-        echo " DETALLE DEL REGISTRO ID {$id} EN MÓDULO: " . strtoupper($modulo) . "\n";
-        echo "===========================================================================\n\n";
-        if (!$resultado['success']) {
-            echo " [✗ NO ENCONTRADO] {$resultado['mensaje']}\n";
-        } else {
-            foreach ($resultado['data'] as $k => $v) {
-                echo " • " . str_pad($k, 25) . ": " . (is_bool($v) ? ($v ? 'TRUE' : 'FALSE') : (string)($v ?? 'NULL')) . "\n";
-            }
-        }
-        echo "\n===========================================================================\n";
-        exit;
-    }
-}
-
-// -------------------------------------------------------------------------
-// ACCIONES DE AUTENTICACIÓN DIRECTA (Opcional por GET/POST)
-// -------------------------------------------------------------------------
-$accion = $_GET['accion'] ?? null;
-if ($accion === 'login' && isset($_GET['usuario'], $_GET['clave'])) {
-    $resLogin = Auth::login($_GET['usuario'], $_GET['clave']);
-    if ($esJson) json_response($resLogin);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo ($resLogin['success'] ? "[✓ OK] " : "[✗ ERROR] ") . $resLogin['mensaje'] . "\n";
+if ($esJson || (php_sapi_name() === 'cli' && empty($_SERVER['HTTP_HOST']))) {
+    $db = Database::getConnection();
+    $info = [
+        'proyecto'   => 'Sistema de Gestión de Adaptaciones y Mantenimiento de Prótesis y Órtesis',
+        'asignatura' => 'Bases de Datos (Ingeniería de Sistemas - ULA)',
+        'usuario'    => Auth::usuarioActual()['nombre_usuario'] ?? 'Invitado',
+        'rol'        => Auth::rolActual(),
+        'conexion'   => Database::testConnection(),
+        'metricas'   => [
+            'pacientes'      => (int)$db->query("SELECT COUNT(*) FROM paciente")->fetchColumn(),
+            'evaluaciones'   => (int)$db->query("SELECT COUNT(*) FROM evaluacion_biomecanica")->fetchColumn(),
+            'dispositivos'   => (int)$db->query("SELECT COUNT(*) FROM dispositivo_protesico")->fetchColumn(),
+            'componentes'    => (int)$db->query("SELECT COUNT(*) FROM componente")->fetchColumn(),
+            'ajustes'        => (int)$db->query("SELECT COUNT(*) FROM historial_ajuste")->fetchColumn(),
+            'mantenimientos' => (int)$db->query("SELECT COUNT(*) FROM mantenimiento_preventivo")->fetchColumn(),
+        ]
+    ];
+    if ($esJson) json_response($info);
+    print_r($info);
     exit;
 }
 
-if ($accion === 'logout') {
-    Auth::logout();
-    $res = ['success' => true, 'mensaje' => 'Sesión cerrada exitosamente.'];
-    if ($esJson) json_response($res);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo "[✓ OK] Sesión cerrada.\n";
-    exit;
-}
+// Para la interfaz web, requerir autenticación
+require_once __DIR__ . '/includes/auth_check.php';
 
-$estadoConexion = Database::testConnection();
+$pageTitle = 'Inicio';
+$activeMenu = 'inicio';
 
-$metricas = [
-    'usuarios'        => 0,
-    'pacientes'       => 0,
-    'evaluaciones'    => 0,
-    'dispositivos'    => 0,
-    'componentes'     => 0,
-    'ajustes'         => 0,
-    'mantenimientos'  => 0,
-];
+$db = Database::getConnection();
+$totalPacientes      = (int)$db->query("SELECT COUNT(*) FROM paciente")->fetchColumn();
+$totalEvaluaciones   = (int)$db->query("SELECT COUNT(*) FROM evaluacion_biomecanica")->fetchColumn();
+$totalDispositivos   = (int)$db->query("SELECT COUNT(*) FROM dispositivo_protesico")->fetchColumn();
+$totalComponentes    = (int)$db->query("SELECT COUNT(*) FROM componente")->fetchColumn();
+$totalAjustes        = (int)$db->query("SELECT COUNT(*) FROM historial_ajuste")->fetchColumn();
+$totalMantenimientos = (int)$db->query("SELECT COUNT(*) FROM mantenimiento_preventivo")->fetchColumn();
 
-if ($estadoConexion['success']) {
-    try {
-        $db = Database::getConnection();
-        $metricas['usuarios']       = (int)$db->query("SELECT COUNT(*) FROM usuario_sistema")->fetchColumn();
-        $metricas['pacientes']      = (int)$db->query("SELECT COUNT(*) FROM paciente")->fetchColumn();
-        $metricas['evaluaciones']   = (int)$db->query("SELECT COUNT(*) FROM evaluacion_biomecanica")->fetchColumn();
-        $metricas['dispositivos']   = (int)$db->query("SELECT COUNT(*) FROM dispositivo_protesico")->fetchColumn();
-        $metricas['componentes']    = (int)$db->query("SELECT COUNT(*) FROM componente")->fetchColumn();
-        $metricas['ajustes']        = (int)$db->query("SELECT COUNT(*) FROM historial_ajuste")->fetchColumn();
-        $metricas['mantenimientos'] = (int)$db->query("SELECT COUNT(*) FROM mantenimiento_preventivo")->fetchColumn();
-    } catch (Throwable $e) {
-        $metricas['error'] = $e->getMessage();
-    }
-}
+require_once __DIR__ . '/includes/header.php';
+?>
 
-$usuarioSesion = Auth::usuarioActual();
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1" style="color: var(--turquesa-oscuro);">Panel Principal</h3>
+        <p class="text-muted small mb-0">Bienvenido(a), <strong><?= htmlspecialchars($usuarioActual['nombre_completo']) ?></strong> (<?= htmlspecialchars($rolActual) ?>)</p>
+    </div>
+    <div>
+        <a href="tests/probar_conexion.php" target="_blank" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-cpu me-1"></i> Banco de Pruebas
+        </a>
+    </div>
+</div>
 
-$infoSistema = [
-    'proyecto'    => 'Sistema de Gestión de Adaptaciones y Mantenimiento de Prótesis y Órtesis',
-    'asignatura'  => 'Bases de Datos',
-    'carrera'     => 'Ingeniería de Sistemas - Universidad de Los Andes (ULA)',
-    'servidor'    => [
-        'php_version' => PHP_VERSION,
-        'sapi'        => php_sapi_name(),
-        'conexion_bd' => $estadoConexion
-    ],
-    'sesion_actual' => [
-        'autenticado' => Auth::estaAutenticado(),
-        'usuario'     => $usuarioSesion['nombre_usuario'] ?? 'Ninguno (Invitado)',
-        'rol'         => Auth::rolActual(),
-    ],
-    'roles_del_sistema' => [
-        'ADMINISTRADOR'      => 'Acceso total y administración de usuarios',
-        'TECNICO_ORTOPEDICO' => 'Gestión de componentes, ajustes y mantenimientos preventivos',
-        'EVALUADOR_CLINICO'  => 'Registro de pacientes, evaluaciones biomecánicas y medidas'
-    ],
-    'cuentas_demo' => [
-        ['usuario' => 'admin',      'rol' => 'ADMINISTRADOR',      'clave' => 'Admin123*'],
-        ['usuario' => 'jperez',     'rol' => 'TECNICO_ORTOPEDICO', 'clave' => 'Tecnico123*'],
-        ['usuario' => 'mrodriguez', 'rol' => 'EVALUADOR_CLINICO',  'clave' => 'Clinico123*'],
-    ],
-    'modulos_crud' => [
-        'usuarios'       => ['modelo' => 'models/Usuario.php', 'controlador' => 'controllers/UsuarioController.php'],
-        'pacientes'      => ['modelo' => 'models/Paciente.php', 'controlador' => 'controllers/PacienteController.php'],
-        'evaluaciones'   => ['modelo' => 'models/Evaluacion.php', 'controlador' => 'controllers/EvaluacionController.php'],
-        'dispositivos'   => ['modelo' => 'models/Dispositivo.php', 'controlador' => 'controllers/DispositivoController.php'],
-        'componentes'    => ['modelo' => 'models/Componente.php', 'controlador' => 'controllers/ComponenteController.php'],
-        'ajustes'        => ['modelo' => 'models/HistorialAjuste.php', 'controlador' => 'controllers/HistorialAjusteController.php'],
-        'mantenimientos' => ['modelo' => 'models/Mantenimiento.php', 'controlador' => 'controllers/MantenimientoController.php'],
-    ],
-    'metricas_base_datos' => $metricas,
-    'banco_de_pruebas'    => [
-        'ruta'    => 'tests/probar_conexion.php',
-        'comando' => 'docker exec -it protesis_app php tests/probar_conexion.php'
-    ]
-];
+<!-- Tarjetas de Métricas -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-4">
+        <div class="card card-custom card-stat p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold">Pacientes</div>
+                    <div class="fs-3 fw-bold text-dark mt-1"><?= $totalPacientes ?></div>
+                </div>
+                <div class="rounded-circle p-3" style="background-color: var(--turquesa-claro); color: var(--turquesa);">
+                    <i class="bi bi-people fs-4"></i>
+                </div>
+            </div>
+            <?php if (Permisos::puede($rolActual, 'pacientes', 'listar')): ?>
+                <a href="pacientes.php" class="small mt-2 d-inline-block text-decoration-none">Ver pacientes &rarr;</a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-if ($esJson) {
-    json_response($infoSistema);
-}
+    <div class="col-sm-6 col-xl-4">
+        <div class="card card-custom card-stat p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold">Evaluaciones</div>
+                    <div class="fs-3 fw-bold text-dark mt-1"><?= $totalEvaluaciones ?></div>
+                </div>
+                <div class="rounded-circle p-3" style="background-color: var(--turquesa-claro); color: var(--turquesa);">
+                    <i class="bi bi-clipboard2-pulse fs-4"></i>
+                </div>
+            </div>
+            <?php if (Permisos::puede($rolActual, 'evaluaciones', 'listar')): ?>
+                <a href="evaluaciones.php" class="small mt-2 d-inline-block text-decoration-none">Ver evaluaciones &rarr;</a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-// Presentación estructurada en texto plano / consola
-header('Content-Type: text/plain; charset=utf-8');
-echo "===========================================================================\n";
-echo " {$infoSistema['proyecto']}\n";
-echo " {$infoSistema['carrera']}\n";
-echo " Asignatura: {$infoSistema['asignatura']}\n";
-echo "===========================================================================\n\n";
+    <div class="col-sm-6 col-xl-4">
+        <div class="card card-custom card-stat p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold">Dispositivos</div>
+                    <div class="fs-3 fw-bold text-dark mt-1"><?= $totalDispositivos ?></div>
+                </div>
+                <div class="rounded-circle p-3" style="background-color: var(--turquesa-claro); color: var(--turquesa);">
+                    <i class="bi bi-bandaid fs-4"></i>
+                </div>
+            </div>
+            <?php if (Permisos::puede($rolActual, 'dispositivos', 'listar')): ?>
+                <a href="dispositivos.php" class="small mt-2 d-inline-block text-decoration-none">Ver prótesis &rarr;</a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-echo "ESTADO DE CONEXIÓN CON POSTGRESQL:\n";
-echo " • Éxito: " . ($estadoConexion['success'] ? 'SÍ (Conectado)' : 'NO') . "\n";
-echo " • Versión PostgreSQL: " . ($estadoConexion['version'] ?? 'N/A') . "\n";
-echo " • Sesión activa actual: " . ($usuarioSesion ? "{$usuarioSesion['nombre_usuario']} [{$usuarioSesion['nombre_rol']}]" : "Ninguna (Invitado)") . "\n";
-echo "\n";
+    <div class="col-sm-6 col-xl-4">
+        <div class="card card-custom card-stat p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold">Componentes Físicos</div>
+                    <div class="fs-3 fw-bold text-dark mt-1"><?= $totalComponentes ?></div>
+                </div>
+                <div class="rounded-circle p-3" style="background-color: var(--turquesa-claro); color: var(--turquesa);">
+                    <i class="bi bi-cpu fs-4"></i>
+                </div>
+            </div>
+            <?php if (Permisos::puede($rolActual, 'componentes', 'listar')): ?>
+                <a href="componentes.php" class="small mt-2 d-inline-block text-decoration-none">Ver catálogo &rarr;</a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-echo "ROLES Y CUENTAS DEMO (Cifradas con password_hash / BCRYPT):\n";
-foreach ($infoSistema['cuentas_demo'] as $cta) {
-    echo " • Usuario: " . str_pad($cta['usuario'], 12) . " | Rol: " . str_pad($cta['rol'], 20) . " | Clave: {$cta['clave']}\n";
-}
-echo "\n";
+    <div class="col-sm-6 col-xl-4">
+        <div class="card card-custom card-stat p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold">Ajustes Realizados</div>
+                    <div class="fs-3 fw-bold text-dark mt-1"><?= $totalAjustes ?></div>
+                </div>
+                <div class="rounded-circle p-3" style="background-color: var(--turquesa-claro); color: var(--turquesa);">
+                    <i class="bi bi-wrench fs-4"></i>
+                </div>
+            </div>
+            <?php if (Permisos::puede($rolActual, 'ajustes', 'listar')): ?>
+                <a href="ajustes.php" class="small mt-2 d-inline-block text-decoration-none">Ver ajustes &rarr;</a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-echo "MÉTRICAS DEL MODELO RELACIONAL (Registros en PostgreSQL):\n";
-echo " • Usuarios del sistema:            {$metricas['usuarios']}\n";
-echo " • Pacientes registrados:           {$metricas['pacientes']}\n";
-echo " • Evaluaciones biomecánicas:       {$metricas['evaluaciones']}\n";
-echo " • Dispositivos protésicos:         {$metricas['dispositivos']}\n";
-echo " • Componentes físicos:             {$metricas['componentes']}\n";
-echo " • Historial de ajustes técnicos:   {$metricas['ajustes']}\n";
-echo " • Mantenimientos preventivos:      {$metricas['mantenimientos']}\n";
-echo "\n";
+    <div class="col-sm-6 col-xl-4">
+        <div class="card card-custom card-stat p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold">Mantenimientos</div>
+                    <div class="fs-3 fw-bold text-dark mt-1"><?= $totalMantenimientos ?></div>
+                </div>
+                <div class="rounded-circle p-3" style="background-color: var(--turquesa-claro); color: var(--turquesa);">
+                    <i class="bi bi-calendar-check fs-4"></i>
+                </div>
+            </div>
+            <?php if (Permisos::puede($rolActual, 'mantenimientos', 'listar')): ?>
+                <a href="mantenimientos.php" class="small mt-2 d-inline-block text-decoration-none">Ver mantenimientos &rarr;</a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
-echo "CONSULTA DE DETALLES POR ID (Sin vistas HTML complejas):\n";
-echo " • Dispositivo por ID:   http://localhost:8080/detalle.php?id=1\n";
-echo " • O mediante index:     http://localhost:8080/?modulo=pacientes&id=1\n";
-echo " • Salida en JSON:       http://localhost:8080/?format=json\n";
-echo "\n";
+<!-- Accesos Directos según Rol -->
+<div class="card card-custom p-4 mb-4">
+    <h5 class="fw-bold mb-3" style="color: var(--turquesa-oscuro);">Módulos Disponibles para su Rol (<?= htmlspecialchars($rolActual) ?>)</h5>
+    <div class="row g-3">
+        <?php if (Permisos::puede($rolActual, 'pacientes', 'crear')): ?>
+        <div class="col-md-4">
+            <a href="pacientes.php?accion=crear" class="btn btn-outline-turquesa w-100 py-3 text-start">
+                <i class="bi bi-person-plus fs-5 me-2 text-primary"></i><strong>Registrar Paciente</strong>
+                <div class="text-muted small mt-1">Registrar nueva ficha clínica de paciente</div>
+            </a>
+        </div>
+        <?php endif; ?>
 
-echo "EJECUCIÓN DEL BANCO DE PRUEBAS:\n";
-echo "   Desde Docker:         docker exec -it protesis_app php tests/probar_conexion.php\n";
-echo "   Desde navegador:      http://localhost:8080/tests/probar_conexion.php\n";
-echo "===========================================================================\n";
+        <?php if (Permisos::puede($rolActual, 'evaluaciones', 'crear')): ?>
+        <div class="col-md-4">
+            <a href="evaluaciones.php?accion=crear" class="btn btn-outline-turquesa w-100 py-3 text-start">
+                <i class="bi bi-clipboard2-plus fs-5 me-2 text-primary"></i><strong>Nueva Evaluación</strong>
+                <div class="text-muted small mt-1">Registrar medidas biomecánicas y nivel de actividad</div>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <?php if (Permisos::puede($rolActual, 'dispositivos', 'crear')): ?>
+        <div class="col-md-4">
+            <a href="dispositivos.php?accion=crear" class="btn btn-outline-turquesa w-100 py-3 text-start">
+                <i class="bi bi-bandaid fs-5 me-2 text-primary"></i><strong>Registrar Dispositivo</strong>
+                <div class="text-muted small mt-1">Asignar nueva prótesis u órtesis a un paciente</div>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <?php if (Permisos::puede($rolActual, 'componentes', 'crear')): ?>
+        <div class="col-md-4">
+            <a href="componentes.php?accion=crear" class="btn btn-outline-turquesa w-100 py-3 text-start">
+                <i class="bi bi-plus-circle fs-5 me-2 text-primary"></i><strong>Nuevo Componente</strong>
+                <div class="text-muted small mt-1">Registrar pieza física por número de serie</div>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <?php if (Permisos::puede($rolActual, 'ajustes', 'crear')): ?>
+        <div class="col-md-4">
+            <a href="ajustes.php?accion=crear" class="btn btn-outline-turquesa w-100 py-3 text-start">
+                <i class="bi bi-tools fs-5 me-2 text-primary"></i><strong>Registrar Ajuste</strong>
+                <div class="text-muted small mt-1">Modificación o ajuste de socket en taller</div>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <?php if (Permisos::puede($rolActual, 'mantenimientos', 'crear')): ?>
+        <div class="col-md-4">
+            <a href="mantenimientos.php?accion=crear" class="btn btn-outline-turquesa w-100 py-3 text-start">
+                <i class="bi bi-calendar-plus fs-5 me-2 text-primary"></i><strong>Programar Mantenimiento</strong>
+                <div class="text-muted small mt-1">Revisión periódica o preventiva de prótesis</div>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <?php if (Permisos::puede($rolActual, 'usuarios', 'listar')): ?>
+        <div class="col-md-4">
+            <a href="usuarios.php" class="btn btn-outline-turquesa w-100 py-3 text-start">
+                <i class="bi bi-people fs-5 me-2 text-primary"></i><strong>Administrar Usuarios</strong>
+                <div class="text-muted small mt-1">Control de roles, cuentas y seguridad</div>
+            </a>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Información Técnica de la Base de Datos -->
+<div class="card card-custom p-4">
+    <h6 class="fw-bold text-muted text-uppercase mb-2">Información del Motor Relacional</h6>
+    <div class="row g-2 text-muted small">
+        <div class="col-md-4"><strong>Motor:</strong> PostgreSQL 15 (Docker)</div>
+        <div class="col-md-4"><strong>Base de Datos:</strong> protesis_ortesis</div>
+        <div class="col-md-4"><strong>Esquema:</strong> 29 tablas normalizadas</div>
+    </div>
+</div>
+
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -1,0 +1,181 @@
+/* =====================================================================
+   ESTILOS PERSONALIZADOS - SISTEMA DE PRÓTESIS Y ÓRTESIS
+   Paleta: Blanco, Turquesa (#20B8B2), Turquesa Claro (#E8F7F7),
+           Turquesa Oscuro (#147D80), Texto (#263B43), Bordes (#E2E8F0)
+   ===================================================================== */
+
+:root {
+    --blanco: #FFFFFF;
+    --turquesa-claro: #E8F7F7;
+    --turquesa: #20B8B2;
+    --turquesa-oscuro: #147D80;
+    --texto-color: #263B43;
+    --texto-secundario: #64748B;
+    --borde-suave: #E2E8F0;
+    --bg-app: #F8FAFC;
+}
+
+body {
+    background-color: var(--bg-app);
+    color: var(--texto-color);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+}
+
+/* Enlaces y tipografía */
+a {
+    color: var(--turquesa-oscuro);
+    text-decoration: none;
+}
+a:hover {
+    color: var(--turquesa);
+}
+
+/* Barra superior (Navbar) */
+.topbar {
+    background-color: var(--blanco);
+    border-bottom: 1px solid var(--borde-suave);
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.topbar-brand {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--turquesa-oscuro);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Menú lateral (Sidebar) */
+.sidebar {
+    background-color: var(--blanco);
+    border-right: 1px solid var(--borde-suave);
+    min-height: calc(100vh - 60px);
+    width: 250px;
+    padding: 1rem 0;
+}
+
+.sidebar .nav-link {
+    color: var(--texto-color);
+    font-size: 0.92rem;
+    font-weight: 500;
+    padding: 0.65rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 3px solid transparent;
+    transition: all 0.15s ease-in-out;
+}
+
+.sidebar .nav-link:hover {
+    background-color: var(--turquesa-claro);
+    color: var(--turquesa-oscuro);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--turquesa-claro);
+    color: var(--turquesa-oscuro);
+    font-weight: 600;
+    border-left-color: var(--turquesa);
+}
+
+.sidebar .nav-heading {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--texto-secundario);
+    padding: 0.75rem 1.25rem 0.25rem;
+    font-weight: 700;
+}
+
+/* Botones Turquesas */
+.btn-turquesa {
+    background-color: var(--turquesa);
+    border-color: var(--turquesa);
+    color: var(--blanco);
+    font-weight: 500;
+}
+
+.btn-turquesa:hover, .btn-turquesa:focus {
+    background-color: var(--turquesa-oscuro);
+    border-color: var(--turquesa-oscuro);
+    color: var(--blanco);
+}
+
+.btn-outline-turquesa {
+    color: var(--turquesa-oscuro);
+    border-color: var(--turquesa);
+    background-color: transparent;
+}
+
+.btn-outline-turquesa:hover {
+    background-color: var(--turquesa-claro);
+    color: var(--turquesa-oscuro);
+    border-color: var(--turquesa);
+}
+
+/* Tarjetas */
+.card-custom {
+    background-color: var(--blanco);
+    border: 1px solid var(--borde-suave);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.card-stat {
+    border-left: 4px solid var(--turquesa);
+}
+
+/* Tablas */
+.table-custom {
+    background-color: var(--blanco);
+    border: 1px solid var(--borde-suave);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.table-custom thead th {
+    background-color: var(--turquesa-claro);
+    color: var(--turquesa-oscuro);
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--borde-suave);
+    padding: 0.75rem 1rem;
+}
+
+.table-custom tbody td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--borde-suave);
+}
+
+.table-custom tbody tr:hover {
+    background-color: #F8FAFC;
+}
+
+/* Badges */
+.badge-turquesa {
+    background-color: var(--turquesa-claro);
+    color: var(--turquesa-oscuro);
+    border: 1px solid rgba(32, 184, 178, 0.3);
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+    font-size: 0.8rem;
+}
+
+/* Formularios */
+.form-control:focus, .form-select:focus {
+    border-color: var(--turquesa);
+    box-shadow: 0 0 0 0.2rem rgba(32, 184, 178, 0.2);
+}
+
+.form-label {
+    font-weight: 500;
+    font-size: 0.88rem;
+    color: var(--texto-color);
+}
