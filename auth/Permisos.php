@@ -5,8 +5,8 @@
  *
  * Implementa una matriz de control de acceso simple y directa en PHP puro:
  * - ADMINISTRADOR: Acceso total al sistema y gestión de usuarios.
- * - TECNICO_ORTOPEDICO: Gestión de componentes, ajustes y mantenimientos.
- * - EVALUADOR_CLINICO: Pacientes, evaluaciones biomecánicas y medidas clínicas.
+ * - TECNICO_ORTOPEDICO: Gestión de piezas protésicas y entregas; consulta clínica.
+ * - EVALUADOR_CLINICO: Gestión de pacientes y evaluaciones biomecánicas; consulta de piezas/entregas.
  */
 
 class Permisos {
@@ -19,33 +19,27 @@ class Permisos {
      */
     private static array $matriz = [
         self::ROL_ADMINISTRADOR => [
-            'usuarios'       => ['listar', 'ver', 'crear', 'editar', 'eliminar'],
-            'pacientes'      => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'condiciones'],
-            'evaluaciones'   => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'medidas'],
-            'dispositivos'   => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'componentes', 'cambiar_estado'],
-            'componentes'    => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'instalar', 'compatibles'],
-            'ajustes'        => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'resumen'],
-            'mantenimientos' => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'marcar_vencidos', 'resumen'],
+            'usuarios'     => ['listar', 'ver', 'crear', 'editar', 'eliminar'],
+            'pacientes'    => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'condiciones'],
+            'evaluaciones' => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'medidas'],
+            'piezas'       => ['listar', 'ver', 'crear', 'editar', 'eliminar'],
+            'entregas'     => ['listar', 'ver', 'crear', 'editar', 'eliminar'],
         ],
 
         self::ROL_TECNICO_ORTOPEDICO => [
-            'usuarios'       => [], // Sin acceso a administración de usuarios
-            'pacientes'      => ['listar', 'ver', 'condiciones'], // Solo consulta clínica
-            'evaluaciones'   => ['listar', 'ver', 'medidas'],    // Solo consulta de historiales
-            'dispositivos'   => ['listar', 'ver', 'componentes', 'cambiar_estado'],
-            'componentes'    => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'instalar', 'compatibles'],
-            'ajustes'        => ['listar', 'ver', 'crear', 'editar', 'resumen'],
-            'mantenimientos' => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'marcar_vencidos', 'resumen'],
+            'usuarios'     => [], // Sin acceso a administración de usuarios
+            'pacientes'    => ['listar', 'ver', 'condiciones'], // Solo consulta clínica
+            'evaluaciones' => ['listar', 'ver', 'medidas'],    // Solo consulta de evaluaciones
+            'piezas'       => ['listar', 'ver', 'crear', 'editar', 'eliminar'], // Gestión de piezas
+            'entregas'     => ['listar', 'ver', 'crear', 'editar', 'eliminar'], // Gestión de entregas
         ],
 
         self::ROL_EVALUADOR_CLINICO => [
-            'usuarios'       => [], // Sin acceso a administración de usuarios
-            'pacientes'      => ['listar', 'ver', 'crear', 'editar', 'condiciones'],
-            'evaluaciones'   => ['listar', 'ver', 'crear', 'editar', 'medidas'],
-            'dispositivos'   => ['listar', 'ver', 'componentes'], // Consulta de dispositivos del paciente
-            'componentes'    => ['listar', 'ver', 'compatibles'], // Solo lectura de catálogo
-            'ajustes'        => ['listar', 'ver', 'resumen'],     // Solo consulta histórica
-            'mantenimientos' => ['listar', 'ver', 'resumen'],     // Solo consulta de estado
+            'usuarios'     => [], // Sin acceso a administración de usuarios
+            'pacientes'    => ['listar', 'ver', 'crear', 'editar', 'condiciones'], // Gestión clínica
+            'evaluaciones' => ['listar', 'ver', 'crear', 'editar', 'eliminar', 'medidas'], // Evaluaciones
+            'piezas'       => ['listar', 'ver'], // Solo consulta de piezas
+            'entregas'     => ['listar', 'ver'], // Solo consulta de historial de entregas
         ]
     ];
 
@@ -60,24 +54,28 @@ class Permisos {
         $modulo = strtolower(trim($modulo));
         $accion = strtolower(trim($accion));
 
-        $accionesPermitidas = self::$matriz[$rol][$modulo] ?? [];
-        return in_array($accion, $accionesPermitidas, true);
+        if (!isset(self::$matriz[$rol][$modulo])) {
+            return false;
+        }
+
+        return in_array($accion, self::$matriz[$rol][$modulo], true);
     }
 
     /**
-     * Retorna la lista completa de acciones permitidas para un rol en un módulo
+     * Retorna todos los módulos a los que el rol tiene al menos permiso de lectura ('listar')
      */
-    public static function accionesPermitidas(?string $rol, string $modulo): array {
+    public static function modulosDisponibles(?string $rol): array {
         if (!$rol || !isset(self::$matriz[$rol])) {
             return [];
         }
-        return self::$matriz[$rol][strtolower($modulo)] ?? [];
-    }
 
-    /**
-     * Retorna la matriz de permisos para documentación o visualización
-     */
-    public static function obtenerMatriz(): array {
-        return self::$matriz;
+        $disponibles = [];
+        foreach (self::$matriz[$rol] as $modulo => $acciones) {
+            if (in_array('listar', $acciones, true)) {
+                $disponibles[] = $modulo;
+            }
+        }
+
+        return $disponibles;
     }
 }

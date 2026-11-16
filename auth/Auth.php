@@ -1,7 +1,6 @@
 <?php
 /**
  * Servicio de Autenticación y Manejo de Sesión
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  *
  * Emplea funciones nativas de PHP:
  * - password_hash() / password_verify()

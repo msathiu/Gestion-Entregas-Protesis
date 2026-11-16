@@ -1,7 +1,6 @@
 <?php
 /**
  * Configuración y Conexión a la Base de Datos PostgreSQL
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  * Patrón: Singleton con PDO
  */
 
