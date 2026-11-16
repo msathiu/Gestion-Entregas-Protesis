@@ -1,7 +1,7 @@
 <?php
 /**
  * Funciones de Utilidad General del Sistema
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+
  */
 
 /**

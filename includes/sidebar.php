@@ -2,6 +2,14 @@
 /**
  * Menú Lateral (Sidebar) con Filtrado de Módulos por Rol
  * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+ *
+ * Módulos visibles según especificación:
+ * 1. Inicio
+ * 2. Pacientes
+ * 3. Evaluaciones
+ * 4. Registro de piezas
+ * 5. Entrega de piezas
+ * 6. Usuarios (solo administrador)
  */
 
 $menuActual = $activeMenu ?? 'inicio';
@@ -14,7 +22,7 @@ $menuActual = $activeMenu ?? 'inicio';
             </a>
         </li>
 
-        <li class="nav-heading">Módulos Clínicos</li>
+        <li class="nav-heading">Gestión Clínica</li>
 
         <?php if (Permisos::puede($rolActual, 'pacientes', 'listar')): ?>
         <li class="nav-item">
@@ -32,36 +40,20 @@ $menuActual = $activeMenu ?? 'inicio';
         </li>
         <?php endif; ?>
 
-        <li class="nav-heading">Prótesis y Taller</li>
+        <li class="nav-heading">Gestión de Prótesis</li>
 
-        <?php if (Permisos::puede($rolActual, 'dispositivos', 'listar')): ?>
+        <?php if (Permisos::puede($rolActual, 'piezas', 'listar')): ?>
         <li class="nav-item">
-            <a class="nav-link <?= ($menuActual === 'dispositivos') ? 'active' : '' ?>" href="dispositivos.php">
-                <i class="bi bi-bandaid"></i> Dispositivos
+            <a class="nav-link <?= ($menuActual === 'piezas') ? 'active' : '' ?>" href="piezas.php">
+                <i class="bi bi-tools"></i> Registro de Piezas
             </a>
         </li>
         <?php endif; ?>
 
-        <?php if (Permisos::puede($rolActual, 'componentes', 'listar')): ?>
+        <?php if (Permisos::puede($rolActual, 'entregas', 'listar')): ?>
         <li class="nav-item">
-            <a class="nav-link <?= ($menuActual === 'componentes') ? 'active' : '' ?>" href="componentes.php">
-                <i class="bi bi-cpu"></i> Componentes
-            </a>
-        </li>
-        <?php endif; ?>
-
-        <?php if (Permisos::puede($rolActual, 'ajustes', 'listar')): ?>
-        <li class="nav-item">
-            <a class="nav-link <?= ($menuActual === 'ajustes') ? 'active' : '' ?>" href="ajustes.php">
-                <i class="bi bi-wrench"></i> Historial de Ajustes
-            </a>
-        </li>
-        <?php endif; ?>
-
-        <?php if (Permisos::puede($rolActual, 'mantenimientos', 'listar')): ?>
-        <li class="nav-item">
-            <a class="nav-link <?= ($menuActual === 'mantenimientos') ? 'active' : '' ?>" href="mantenimientos.php">
-                <i class="bi bi-calendar-check"></i> Mantenimiento
+            <a class="nav-link <?= ($menuActual === 'entregas') ? 'active' : '' ?>" href="entregas.php">
+                <i class="bi bi-box-seam"></i> Entrega de Piezas
             </a>
         </li>
         <?php endif; ?>

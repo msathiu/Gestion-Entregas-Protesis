@@ -1,7 +1,6 @@
 <?php
 /**
  * Módulo: Gestión de Usuarios y Roles (Exclusivo ADMINISTRADOR)
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  */
 
 require_once __DIR__ . '/includes/auth_check.php';

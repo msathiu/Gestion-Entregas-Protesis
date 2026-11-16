@@ -1,7 +1,7 @@
 <?php
 /**
  * Pie de Página Común
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+
  */
 ?>
     </main>

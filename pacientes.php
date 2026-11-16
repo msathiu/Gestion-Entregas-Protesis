@@ -1,7 +1,6 @@
 <?php
 /**
  * Módulo: Gestión de Pacientes
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  */
 
 require_once __DIR__ . '/includes/auth_check.php';
@@ -117,7 +116,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Número de Documento / Cédula <span class="text-danger">*</span></label>
+                    <label class="form-label">Número de Documento Identidad <span class="text-danger">*</span></label>
                     <input type="text" name="numero_documento" class="form-control" required
                            value="<?= htmlspecialchars($_POST['numero_documento'] ?? $pacienteEditar['numero_documento'] ?? '') ?>"
                            placeholder="Ej: V-12345678">
@@ -212,7 +211,7 @@ require_once __DIR__ . '/includes/header.php';
 
         <div class="row g-3 mb-4">
             <div class="col-sm-6 col-md-4">
-                <span class="text-muted small d-block">Documento / Cédula</span>
+                <span class="text-muted small d-block">Documento Identidad</span>
                 <span class="fw-semibold"><?= htmlspecialchars($p['numero_documento']) ?></span>
             </div>
             <div class="col-sm-6 col-md-4">
@@ -295,7 +294,7 @@ require_once __DIR__ . '/includes/header.php';
             <table class="table table-custom mb-0">
                 <thead>
                     <tr>
-                        <th>Cédula / Documento</th>
+                        <th>Documento Identidad</th>
                         <th>Nombres y Apellidos</th>
                         <th>Nacimiento</th>
                         <th>Sexo</th>

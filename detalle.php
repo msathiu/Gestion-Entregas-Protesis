@@ -1,10 +1,9 @@
 <?php
 /**
  * Consulta de Detalle por ID (Compatibilidad con URLs directas)
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  *
- * Resuelve peticiones directas como detalle.php?id=1 o detalle.php?modulo=pacientes&id=1
- * devolviendo los datos estructurados sin vistas HTML complejas.
+ * Resuelve peticiones directas como detalle.php?id=1 o detalle.php?modulo=piezas&id=1
+ * devolviendo los datos estructurados en JSON o texto plano.
  */
 
 require_once __DIR__ . '/config/database.php';
@@ -12,25 +11,24 @@ require_once __DIR__ . '/includes/funciones.php';
 require_once __DIR__ . '/auth/Auth.php';
 require_once __DIR__ . '/controllers/PacienteController.php';
 require_once __DIR__ . '/controllers/EvaluacionController.php';
-require_once __DIR__ . '/controllers/DispositivoController.php';
-require_once __DIR__ . '/controllers/ComponenteController.php';
-require_once __DIR__ . '/controllers/HistorialAjusteController.php';
-require_once __DIR__ . '/controllers/MantenimientoController.php';
+require_once __DIR__ . '/controllers/PiezaController.php';
+require_once __DIR__ . '/controllers/EntregaController.php';
+require_once __DIR__ . '/controllers/UsuarioController.php';
 
-// Para visualización académica directa, si no hay sesión activa se inicia como administrador
+// Si no hay sesión activa se inicia temporalmente como administrador para consulta directa
 if (!Auth::estaAutenticado()) {
     Auth::iniciarSesionComo('admin');
 }
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$modulo = strtolower($_GET['modulo'] ?? 'dispositivos');
+$modulo = strtolower($_GET['modulo'] ?? 'piezas');
 $esJson = (isset($_GET['format']) && $_GET['format'] === 'json') ||
           (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
 
 if ($id <= 0) {
     $res = [
         'success' => false,
-        'mensaje' => 'Debe especificar un parámetro ID numérico válido mayor a cero (ejemplo: detalle.php?id=1 o detalle.php?modulo=pacientes&id=1).'
+        'mensaje' => 'Debe especificar un parámetro ID numérico válido mayor a cero (ejemplo: detalle.php?id=1 o detalle.php?modulo=piezas&id=1).'
     ];
     if ($esJson) json_response($res, 400);
 
@@ -40,19 +38,18 @@ if ($id <= 0) {
 }
 
 $controlador = match ($modulo) {
-    'pacientes'      => new PacienteController(),
-    'evaluaciones'   => new EvaluacionController(),
-    'dispositivos'   => new DispositivoController(),
-    'componentes'    => new ComponenteController(),
-    'ajustes'        => new HistorialAjusteController(),
-    'mantenimientos' => new MantenimientoController(),
-    default          => null
+    'pacientes'    => new PacienteController(),
+    'evaluaciones' => new EvaluacionController(),
+    'piezas'       => new PiezaController(),
+    'entregas'     => new EntregaController(),
+    'usuarios'     => new UsuarioController(),
+    default        => null
 };
 
 if (!$controlador) {
     $res = [
         'success' => false,
-        'mensaje' => "Módulo '{$modulo}' no reconocido. Módulos disponibles: pacientes, evaluaciones, dispositivos, componentes, ajustes, mantenimientos."
+        'mensaje' => "El módulo '{$modulo}' no es válido. Módulos soportados: pacientes, evaluaciones, piezas, entregas, usuarios."
     ];
     if ($esJson) json_response($res, 404);
 
@@ -67,33 +64,22 @@ if ($esJson) {
     json_response($resultado, $resultado['success'] ? 200 : 404);
 }
 
-// Presentación estructurada en texto plano
+// Salida en texto plano legible
 header('Content-Type: text/plain; charset=utf-8');
-echo "===========================================================================\n";
-echo " CONSULTA DE DETALLE POR ID - MÓDULO: " . strtoupper($modulo) . "\n";
-echo " Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)\n";
-echo " Usuario en sesión: " . Auth::usuarioActual()['nombre_usuario'] . " (" . Auth::rolActual() . ")\n";
-echo "===========================================================================\n\n";
-
 if (!$resultado['success']) {
-    echo " [✗ NO ENCONTRADO] {$resultado['mensaje']}\n";
-} else {
-    echo " [✓ ENCONTRADO] Datos del registro ID {$id}:\n";
-    foreach ($resultado['data'] as $columna => $valor) {
-        $valorStr = is_bool($valor) ? ($valor ? 'TRUE' : 'FALSE') : (string)($valor ?? 'NULL');
-        echo "   • " . str_pad($columna, 28) . ": {$valorStr}\n";
-    }
-
-    // Si es un dispositivo, mostrar también sus componentes instalados
-    if ($modulo === 'dispositivos' && $controlador instanceof DispositivoController) {
-        $comps = $controlador->componentes($id);
-        if ($comps['success'] && !empty($comps['data'])) {
-            echo "\n Componentes Físicos Instalados en este Dispositivo:\n";
-            foreach ($comps['data'] as $c) {
-                echo "   └─ [Serie: {$c['numero_serie']}] {$c['nombre_modelo']} ({$c['nombre_categoria']}) - Fabricante: {$c['nombre_fabricante']} (Instalado: {$c['fecha_instalacion']})\n";
-            }
-        }
-    }
+    echo "CONSULTA DE DETALLE FALLIDA\n";
+    echo "Mensaje: {$resultado['mensaje']}\n";
+    exit;
 }
 
-echo "\n===========================================================================\n";
+echo "===========================================================================\n";
+echo " DETALLE DEL REGISTRO [MÓDULO: " . strtoupper($modulo) . " | ID: {$id}]\n";
+echo "===========================================================================\n";
+foreach ($resultado['data'] as $campo => $valor) {
+    if (is_array($valor)) {
+        echo sprintf(" %-28s : %s\n", $campo, json_encode($valor, JSON_UNESCAPED_UNICODE));
+    } else {
+        echo sprintf(" %-28s : %s\n", $campo, (string)$valor);
+    }
+}
+echo "===========================================================================\n";

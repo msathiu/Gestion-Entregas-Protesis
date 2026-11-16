@@ -48,7 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="bi bi-diagram-3-fill fs-3"></i>
             </div>
             <h4 class="fw-bold mb-1" style="color: var(--turquesa-oscuro);">Sistema de Prótesis y Órtesis</h4>
-            <p class="text-muted small">Ingeniería de Sistemas - Asignatura: Bases de Datos</p>
         </div>
 
         <?php if ($error): ?>

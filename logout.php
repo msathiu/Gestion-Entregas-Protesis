@@ -1,7 +1,6 @@
 <?php
 /**
  * Cierre de Sesión
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
  */
 
 require_once __DIR__ . '/config/database.php';

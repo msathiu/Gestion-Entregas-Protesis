@@ -1,7 +1,7 @@
 <?php
 /**
  * Cabecera Común de la Interfaz Web
- * Asignatura: Bases de Datos - Ingeniería de Sistemas (ULA)
+
  */
 
 require_once __DIR__ . '/auth_check.php';
